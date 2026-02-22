@@ -1,0 +1,45 @@
+
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    style="?attr/bottomSheetStyle">
+
+    <TextView
+        android:id="@+id/set_goal_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/set_goal_weight"
+        style="?attr/textAppearanceHeadlineLargeEmphasized"
+        android:layout_marginBottom="15dp"
+        android:layout_marginTop="10dp"
+        android:textAlignment="center"/>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        style="?attr/textInputOutlinedStyle"
+        android:hint="@string/weight_hint"
+        android:layout_marginHorizontal="15dp"
+        android:layout_marginBottom="10dp"
+        >
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/goal_weight_input_edit_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <Button
+        android:id="@+id/set_goal_weight_submit_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/submit"
+        android:textSize="24sp"
+        android:layout_gravity="center"
+        android:layout_marginTop="25dp"
+        android:padding="15dp"/>
+
+</LinearLayout>

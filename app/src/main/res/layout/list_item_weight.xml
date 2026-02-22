@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="?attr/minTouchTargetSize"
+    android:orientation="horizontal">
+
+    <LinearLayout
+        android:layout_width="60dp"
+        android:layout_height="match_parent"
+        android:background="?attr/colorSecondaryContainer"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/day_of_week"
+            style="?attr/textAppearanceBodyLargeEmphasized"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/day_of_month"
+            style="?attr/textAppearanceBodyLargeEmphasized"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:maxLines="1" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/weight"
+        style="?attr/textAppearanceBodyLarge"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:layout_marginStart="15dp"
+        android:layout_weight="1"
+        android:maxLines="1" />
+
+    <Button
+        android:id="@+id/edit_weight_button"
+        style="?attr/materialIconButtonFilledStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="5dp"
+        android:layout_marginEnd="10dp"
+        android:backgroundTint="?attr/colorPrimary"
+        android:contentDescription="@string/edit_entry"
+        app:icon="@drawable/edit_icon" />
+
+    <Button
+        android:id="@+id/delete_weight_button"
+        style="?attr/materialIconButtonFilledStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginVertical="5dp"
+        android:layout_marginEnd="10dp"
+        android:backgroundTint="?attr/colorError"
+        android:contentDescription="@string/delete_entry"
+        app:icon="@drawable/delete_icon" />
+
+</LinearLayout>
