@@ -1,37 +1,49 @@
 package com.josephlimbert.weighttracker.viewmodel;
 
 import android.app.Application;
-import android.content.Context;
 
+import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
+import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.firebase.auth.AuthResult;
+import com.google.firebase.auth.FirebaseUser;
 import com.josephlimbert.weighttracker.model.User;
-import com.josephlimbert.weighttracker.repo.WeightTrackerRepository;
+import com.josephlimbert.weighttracker.repo.FirebaseRepo;
 
 public class UserViewModel extends AndroidViewModel {
-    private final WeightTrackerRepository weightRepo;
+    private MutableLiveData<User> userLiveData = new MutableLiveData<>();
+    private MutableLiveData<FirebaseUser> authUserLiveData = new MutableLiveData<>();
 
-    public UserViewModel(Application application) {
+    public UserViewModel(@NonNull Application application) {
         super(application);
-        weightRepo = WeightTrackerRepository.getInstance(application.getApplicationContext());
     }
 
-    public void setLoggedInUserId(long userId, Context context) {
-       weightRepo.setLoggedInUserId(userId, context);
+    public void signInEmail(String email, String password, OnCompleteListener<AuthResult> listener) {
+        FirebaseRepo.getInstance().signInEmail(email, password, listener);
     }
 
-    public MutableLiveData<Long> getLoggedInUserId() { return weightRepo.getLoggedInUserId(); }
-
-    public void logOutUser(Context context) {
-        weightRepo.logOutUser(context);
+    public void signUpEmail(String email, String password, OnCompleteListener<AuthResult> listener) {
+        FirebaseRepo.getInstance().signUpEmail(email, password, listener);
     }
 
-    public User loginUser(String username, String password) {
-        return weightRepo.loginUser(username, password);
+    public void signInAnonymous(OnCompleteListener<AuthResult> listener) {
+        FirebaseRepo.getInstance().signInAnonymous(listener);
+    }
+    public void signOut() {
+        FirebaseRepo.getInstance().signOut();
+    }
+    public MutableLiveData<User> getUserProfile() {
+        userLiveData = FirebaseRepo.getInstance().getUserLiveData();
+        return userLiveData;
     }
 
-    public long registerUser(User user) {
-        return weightRepo.registerUser(user);
+    public void addUserPhone(String phone) { FirebaseRepo.getInstance().addUserPhone(phone); }
+
+    public MutableLiveData<FirebaseUser> getAuthUser() {
+        authUserLiveData = FirebaseRepo.getInstance().getAuthUser();
+        return authUserLiveData;
     }
 }

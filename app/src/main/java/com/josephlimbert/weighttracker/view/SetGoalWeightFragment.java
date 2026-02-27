@@ -1,7 +1,6 @@
 package com.josephlimbert.weighttracker.view;
 
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,16 +14,14 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.josephlimbert.weighttracker.R;
-import com.josephlimbert.weighttracker.model.GoalWeight;
+import com.josephlimbert.weighttracker.model.Weight;
 import com.josephlimbert.weighttracker.viewmodel.UserViewModel;
 import com.josephlimbert.weighttracker.viewmodel.WeightViewModel;
 
 public class SetGoalWeightFragment extends BottomSheetDialogFragment {
     EditText weightText;
     WeightViewModel weightViewModel;
-    long userId;
-
-    GoalWeight goalWeight;
+    float goalWeight;
 
     @NonNull
     @Override
@@ -35,20 +32,16 @@ public class SetGoalWeightFragment extends BottomSheetDialogFragment {
         weightText = rootView.findViewById(R.id.goal_weight_input_edit_text);
         TextView goalWeightLabel = rootView.findViewById(R.id.set_goal_label);
         Button submitButton = rootView.findViewById(R.id.set_goal_weight_submit_button);
-        UserViewModel userViewModel = new ViewModelProvider(requireActivity()).get(UserViewModel.class);
         weightViewModel = new ViewModelProvider(requireActivity()).get(WeightViewModel.class);
-
-        // Get the logged in user ID from the view model live data and set the local variable
-        userViewModel.getLoggedInUserId().observe(getViewLifecycleOwner(), id -> userId = id);
 
         // Check for boolean argument indicating whether this view was created for editing
         // an existing goal weight or setting a new one.
         if (getArguments() != null) {
             // Store existing goal weight if we are editing a goal weight
             if (getArguments().getBoolean("isEditing")) {
-                goalWeight = weightViewModel.getGoalWeight.getValue();
-                if (goalWeight != null) {
-                    weightText.setText(String.valueOf(goalWeight.getWeight()));
+                if (weightViewModel.getGoalWeight().getValue() != null) {
+                    goalWeight = weightViewModel.getGoalWeight().getValue();
+                    weightText.setText(String.valueOf(goalWeight));
                     goalWeightLabel.setText(getString(R.string.change_goal_weight));
                 }
             }
@@ -69,16 +62,12 @@ public class SetGoalWeightFragment extends BottomSheetDialogFragment {
                 float newWeight = Float.parseFloat(weightText.getText().toString());
                 // If we are editing a goal weight then we update the weight and send the update to the database
                 // Otherwise, we create a new goal weight and add it to the database
-                if (goalWeight != null) {
-                    goalWeight.setWeight(newWeight);
+                if (weightViewModel.getGoalWeight().getValue() != null) {
+                    goalWeight = newWeight;
                     weightViewModel.updateGoalWeight(goalWeight);
                     dismiss();
                 } else {
-                    GoalWeight weight = new GoalWeight();
-                    weight.setWeight(newWeight);
-                    weight.setId(userId);
-                    weight.setUserId(userId);
-                    weightViewModel.addGoalWeight(weight);
+                    weightViewModel.addGoalWeight(newWeight);
                     dismiss();
                 }
             } catch (NumberFormatException e) {

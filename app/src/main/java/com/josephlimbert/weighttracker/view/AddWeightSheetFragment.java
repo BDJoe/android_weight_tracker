@@ -3,6 +3,7 @@ package com.josephlimbert.weighttracker.view;
 import android.content.DialogInterface;
 import android.icu.util.TimeZone;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,8 +15,11 @@ import androidx.annotation.Nullable;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.android.material.datepicker.CalendarConstraints;
+import com.google.android.material.datepicker.DateValidatorPointBackward;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.datepicker.MaterialPickerOnPositiveButtonClickListener;
+import com.google.firebase.Timestamp;
 import com.josephlimbert.weighttracker.R;
 import com.josephlimbert.weighttracker.model.Weight;
 import com.josephlimbert.weighttracker.viewmodel.UserViewModel;
@@ -32,8 +36,6 @@ public class AddWeightSheetFragment extends BottomSheetDialogFragment {
     EditText datePickerText;
     EditText weightText;
     WeightViewModel weightViewModel;
-    long userId;
-
     Weight weight;
 
     @NonNull
@@ -50,23 +52,21 @@ public class AddWeightSheetFragment extends BottomSheetDialogFragment {
         weightViewModel = new ViewModelProvider(requireActivity()).get(WeightViewModel.class);
         UserViewModel userViewModel = new ViewModelProvider(requireActivity()).get(UserViewModel.class);
 
-        // Observe the user ID live data from the user view model.
-        // Will set the local userId variable when the live data is updated.
-        userViewModel.getLoggedInUserId().observe(getViewLifecycleOwner(), id -> userId = id);
-
         // Set the date on the date picker to today's date
         datePickerText.setText(todayString);
 
         // If we are editing a weight then a weight ID will be passed as an argument
         // Update views with data from the existing weight
         if (getArguments() != null) {
-            long weightId = getArguments().getLong("weightId");
-            weight = weightViewModel.getWeight(weightId);
-            if (weight != null) {
-                datePickerText.setText(dateToString(weight.getRecordedDate()));
-                weightText.setText(String.valueOf(weight.getWeight()));
-                sheetLabel.setText(R.string.edit_weight_label);
-            }
+            String weightId = getArguments().getString("weightId");
+            weightViewModel.getWeightById(weightId).observe(getViewLifecycleOwner(), weight -> {
+                this.weight = weight;
+                if (weight != null) {
+                    weightText.setText(String.valueOf(weight.getWeight()));
+                    sheetLabel.setText(R.string.edit_weight_label);
+                    datePickerText.setText(dateToString(weight.getRecordedDate().toDate()));
+                }
+            });
         }
 
         datePickerText.setOnClickListener(this::showDatePicker);
@@ -77,8 +77,6 @@ public class AddWeightSheetFragment extends BottomSheetDialogFragment {
     @Override
     public void onDismiss(@NonNull DialogInterface dialog) {
         super.onDismiss(dialog);
-        // After adding a new weight we check if the goal weight has been reached.
-        weightViewModel.checkGoalReached(Float.parseFloat(weightText.getText().toString()));
     }
 
     // Function called to submit the weight entered
@@ -94,14 +92,13 @@ public class AddWeightSheetFragment extends BottomSheetDialogFragment {
                 // Else we add a new weight
                 if (weight != null) {
                     weight.setWeight(parsedWeight);
-                    weight.setRecordedDate(parsedDate);
-                    weightViewModel.updateWeight(weight);
+                    weight.setRecordedDate(new Timestamp(parsedDate));
+                    weightViewModel.addWeight(weight);
                     dismiss();
                 } else {
                     Weight newWeight = new Weight();
                     newWeight.setWeight(parsedWeight);
-                    newWeight.setRecordedDate(parsedDate);
-                    newWeight.setUserId(userId);
+                    newWeight.setRecordedDate(new Timestamp(parsedDate));
                     weightViewModel.addWeight(newWeight);
                     dismiss();
                 }
@@ -126,6 +123,8 @@ public class AddWeightSheetFragment extends BottomSheetDialogFragment {
                 throw new RuntimeException(e);
             }
         }
+        CalendarConstraints.Builder constraintsBuilder = new CalendarConstraints.Builder().setValidator(DateValidatorPointBackward.now());
+        datePickerBuilder.setCalendarConstraints(constraintsBuilder.build());
         MaterialDatePicker<Long> datePicker = datePickerBuilder.build();
         MaterialPickerOnPositiveButtonClickListener<Long> clickListener = selection -> {
             DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.getDefault());

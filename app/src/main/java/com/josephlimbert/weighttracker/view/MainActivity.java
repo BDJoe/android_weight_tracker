@@ -1,8 +1,6 @@
 package com.josephlimbert.weighttracker.view;
 
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
@@ -18,6 +16,7 @@ import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.loadingindicator.LoadingIndicator;
 import com.josephlimbert.weighttracker.R;
 import com.josephlimbert.weighttracker.viewmodel.UserViewModel;
 
@@ -52,28 +51,17 @@ public class MainActivity extends AppCompatActivity {
 
         // Initialize user view model and get logged in user id from shared preferences
         UserViewModel userViewModel = new ViewModelProvider(this).get(UserViewModel.class);
-        SharedPreferences sharedPref = getApplicationContext().getSharedPreferences("AuthUser", Context.MODE_PRIVATE);
-        long userId = sharedPref.getLong("userId", -1);
-
-        // if user id is -1 then there is no logged in user so we show the log in activity.
-        // Otherwise, we store the logged in user ID in the user view model
-        if (userId == -1){
-            showLoginActivity();
-        } else {
-            userViewModel.setLoggedInUserId(userId, getApplicationContext());
-        }
-
+        userViewModel.getAuthUser().observe(this, firebaseUser -> {
+            if (firebaseUser == null) {
+                userViewModel.signInAnonymous(task -> {
+                });
+            }
+        });
     }
 
     @Override
     public boolean onSupportNavigateUp() {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
         return navController.navigateUp() || super.onSupportNavigateUp();
-    }
-
-    // This function will show the log in activity
-    public void showLoginActivity() {
-        Intent intent = new Intent(this, LoginActivity.class);
-        startActivity(intent);
     }
 }

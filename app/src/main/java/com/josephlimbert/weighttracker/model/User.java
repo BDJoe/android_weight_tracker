@@ -1,42 +1,44 @@
 package com.josephlimbert.weighttracker.model;
 
-import androidx.room.ColumnInfo;
-import androidx.room.Entity;
-import androidx.room.PrimaryKey;
-
-@Entity(tableName = "Users")
 public class User {
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id")
-    private long id;
+    private String id;
+    private String email;
 
-    @ColumnInfo(name = "username")
-    private String username;
+    private float goalWeight;
 
-    @ColumnInfo(name = "password")
-    private String password;
+    private String phone;
 
-    public long getId() {
+    public User() {}
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public float getGoalWeight() {
+        return goalWeight;
+    }
+
+    public void setGoalWeight(float goalWeight) {
+        this.goalWeight = goalWeight;
+    }
+
+    public String getId() {
         return id;
     }
 
-    public void setId(long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public String getUsername() {
-        return username;
+    public String getPhone() {
+        return phone;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
+    public void setPhone(String phone) {
+        this.phone = phone;
     }
 }

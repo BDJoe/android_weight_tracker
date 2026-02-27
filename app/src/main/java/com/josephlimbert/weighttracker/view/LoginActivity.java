@@ -1,27 +1,41 @@
 package com.josephlimbert.weighttracker.view;
 
 import android.os.Bundle;
+import android.util.Log;
+import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.AuthResult;
+import com.google.firebase.auth.FirebaseAuthEmailException;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException;
+import com.google.firebase.auth.FirebaseAuthUserCollisionException;
+import com.google.firebase.auth.FirebaseUser;
 import com.josephlimbert.weighttracker.R;
 import com.josephlimbert.weighttracker.model.User;
 import com.josephlimbert.weighttracker.viewmodel.UserViewModel;
+import com.josephlimbert.weighttracker.viewmodel.WeightViewModel;
 
 public class LoginActivity extends AppCompatActivity {
 
     private UserViewModel userViewModel;
-    private EditText usernameInput;
+    private EditText emailInput;
     private EditText passwordInput;
+    Button loginButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,63 +49,47 @@ public class LoginActivity extends AppCompatActivity {
         });
         // Initialize variables
         userViewModel = new ViewModelProvider(this).get(UserViewModel.class);
-        usernameInput = findViewById(R.id.username_input);
+        emailInput = findViewById(R.id.email_input);
         passwordInput = findViewById(R.id.password_input);
-        Button loginButton = findViewById(R.id.login_submit_button);
-        TextView guestButton = findViewById(R.id.login_guest_button);
+        loginButton = findViewById(R.id.login_submit_button);
 
         loginButton.setOnClickListener(this::submitCredentials);
-        guestButton.setOnClickListener(this::loginGuest);
     }
 
     // This function will log the user in if they already have an account or create a new account
     public void submitCredentials(View v) {
         // do nothing if the username and password are not valid
         if (!validateFields()) return;
+        loginButton.setEnabled(false);
 
-        long userId;
-        String username = usernameInput.getText().toString();
+        String email = emailInput.getText().toString();
         String password = passwordInput.getText().toString();
         // Try to retrieve the user from the database
         //If the user doesn't exist we create a new one
-        User user = userViewModel.loginUser(username, password);
-        if (user == null) {
-            User newUser = new User();
-            newUser.setUsername(username);
-            newUser.setPassword(password);
-            userId = userViewModel.registerUser(newUser);
-        }
-        else userId = user.getId();
-        // log the user in and close the activity
-        userViewModel.setLoggedInUserId(userId, getApplicationContext());
-        finish();
-    }
-
-    // This function will log in a user anonymously
-    public void loginGuest(View v) {
-        // Create an anonymous user
-        long userId;
-        String username = getString(R.string.anonymous_login);
-        String password = getString(R.string.anonymous_login);
-        User user = userViewModel.loginUser(username, password);
-        // Check if an anonymous user already exits. If it does we log in as that user, otherwise
-        // we create a new anonymous user. This is required since we need a user ID for the weight db.
-        if (user == null) {
-            User newUser = new User();
-            newUser.setUsername(username);
-            newUser.setPassword(password);
-            userId = userViewModel.registerUser(newUser);
-        }
-        else userId = user.getId();
-
-        userViewModel.setLoggedInUserId(userId, getApplicationContext());
-        finish();
+        userViewModel.signUpEmail(email, password, task -> {
+            if (task.isSuccessful()) {
+                finish();
+            } else {
+                if (task.getException() instanceof FirebaseAuthUserCollisionException) {
+                    userViewModel.signInEmail(email, password, signInTask -> {
+                        if (signInTask.isSuccessful()) {
+                            finish();
+                        } else {
+                            if (signInTask.getException() instanceof FirebaseAuthInvalidCredentialsException) {
+                                Toast.makeText(getApplicationContext(), "Invalid Credentials", Toast.LENGTH_LONG).show();
+                                loginButton.setEnabled(true);
+                            }
+                        }
+                    });
+                }
+            }
+        });
     }
 
     // This function checks that the username and password are not empty before submitting them.
     private boolean validateFields() {
-        if (usernameInput.length() == 0) {
-            usernameInput.setError("Username cannot be empty");
+        if (emailInput.length() == 0) {
+            emailInput.setError("Username cannot be empty");
             return false;
         }
         if (passwordInput.length() == 0) {

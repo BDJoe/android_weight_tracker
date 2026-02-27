@@ -1,14 +1,14 @@
 package com.josephlimbert.weighttracker.view;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -44,9 +44,10 @@ public class SettingsFragment extends Fragment {
         Button logoutButton = rootView.findViewById(R.id.logout_button);
 
         logoutButton.setOnClickListener(v -> {
-            // call log out function on the view model then load main activity
+            logoutButton.setEnabled(false);
+            // TODO: call log out function on the view model then load main activity
             UserViewModel userViewModel = new ViewModelProvider(this).get(UserViewModel.class);
-            userViewModel.logOutUser(rootView.getContext());
+            userViewModel.signOut();
             Intent intent = new Intent(rootView.getContext(), MainActivity.class);
             startActivity(intent);
         });
@@ -60,19 +61,29 @@ public class SettingsFragment extends Fragment {
             sheet.setArguments(bundle);
             sheet.show(getParentFragmentManager(), "edit goal weight");
         });
-        // Create a shared preferences variable to read and store the phone number
-        SharedPreferences sharedPref = requireActivity().getPreferences(Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPref.edit();
-        String phoneNumber = sharedPref.getString("userPhoneNumber", "");
 
-        // If the phone number has previously been set then set the input text to the phone number
-        // and disable the input. We also hide the submit button and show the edit button
-        if (!phoneNumber.isBlank()) {
-            submitPhoneButton.setVisibility(View.GONE);
-            phoneText.setText(phoneNumber);
-            phoneText.setEnabled(false);
-            editPhoneButton.setVisibility(View.VISIBLE);
-        }
+        UserViewModel userViewModel = new ViewModelProvider(requireActivity()).get(UserViewModel.class);
+        userViewModel.getAuthUser().observe(getViewLifecycleOwner(), firebaseUser -> {
+            if (firebaseUser == null) return;
+            if (firebaseUser.isAnonymous()) {
+                logoutButton.setVisibility(View.GONE);
+            } else {
+                logoutButton.setVisibility(View.VISIBLE);
+            }
+        });
+
+        userViewModel.getUserProfile().observe(getViewLifecycleOwner(), user -> {
+            if (user != null) {
+                String phone = user.getPhone();
+                if (phone != null){
+                    submitPhoneButton.setVisibility(View.GONE);
+                    phoneText.setText(phone);
+                    phoneText.setEnabled(false);
+                    editPhoneButton.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+
 
         editPhoneButton.setOnClickListener(v -> {
             // If the phone number is set, we re-enable the text input and allow for editing it
@@ -82,9 +93,7 @@ public class SettingsFragment extends Fragment {
         });
 
         submitPhoneButton.setOnClickListener(v -> {
-            // Store the phone number in shared preferences then disable the input and change the button to edit
-            editor.putString("userPhoneNumber", phoneText.getText().toString());
-            editor.apply();
+            userViewModel.addUserPhone(phoneText.getText().toString());
             submitPhoneButton.setVisibility(View.GONE);
             phoneText.setEnabled(false);
             editPhoneButton.setVisibility(View.VISIBLE);
@@ -98,12 +107,10 @@ public class SettingsFragment extends Fragment {
                         // If granted we set the switch to enabled and save the switches state to shared preferences
                         Log.d("Permission: ", "GRANTED");
                         smsSwitch.setChecked(true);
-                        editor.putBoolean("smsEnabled", true);
                     } else {
                         Log.d("Permission: ", "DENIED");
                         // If denied we set the switch to disabled and save the switches state to shared preferences
                         smsSwitch.setChecked(false);
-                        editor.putBoolean("smsEnabled", false);
                     }
                 }
         );
@@ -116,18 +123,16 @@ public class SettingsFragment extends Fragment {
                 if (!permissionGranted())
                     permissionsRegistration.launch(smsPermission);
                 numberInput.setVisibility(View.VISIBLE);
-                editor.putBoolean("smsEnabled", true);
             } else {
                 // if the switch is disabled we hide the phone input and save the switches state to shared preferences
                 numberInput.setVisibility(View.GONE);
-                editor.putBoolean("smsEnabled", false);
             }
         });
 
         // When creating the settings view we get the state of the sms switch from shared preferences and set it
-        boolean smsEnabled = sharedPref.getBoolean("smsEnabled", false);
+        boolean smsEnabled = false;
         // check if the sms permissions have been granted. If so, we set the switch to checked.
-        if (permissionGranted() && smsEnabled) {
+        if (permissionGranted()) {
             smsSwitch.setChecked(true);
             numberInput.setVisibility(View.VISIBLE);
         } else {

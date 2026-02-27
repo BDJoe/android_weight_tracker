@@ -1,174 +1,174 @@
 package com.josephlimbert.weighttracker.viewmodel;
 
-import android.app.Application;
-
-import androidx.annotation.NonNull;
-import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.Transformations;
+import androidx.lifecycle.ViewModel;
 
-import com.josephlimbert.weighttracker.model.GoalWeight;
 import com.josephlimbert.weighttracker.model.Weight;
-import com.josephlimbert.weighttracker.repo.WeightTrackerRepository;
+import com.josephlimbert.weighttracker.repo.FirebaseRepo;
 
 import java.util.List;
 
-public class WeightViewModel extends AndroidViewModel {
+public class WeightViewModel extends ViewModel {
+    private MutableLiveData<List<Weight>> weightListLiveData = new MutableLiveData<>();
+    private MutableLiveData<Weight> weightLiveData = new MutableLiveData<>();
+    private MutableLiveData<Float> goalWeightLiveData = new MutableLiveData<>();
+    private MutableLiveData<Weight> currentWeightLiveData = new MutableLiveData<>();
+    private MutableLiveData<Weight> startingWeightLiveData = new MutableLiveData<>();
+    private MutableLiveData<Boolean> goalReachedLiveData = new MutableLiveData<>();
 
-    private WeightTrackerRepository weightRepo;
+    public WeightViewModel() {}
 
-    public MutableLiveData<Boolean> goalReached = new MutableLiveData<>();
-
-    private final MutableLiveData<Long> loggedInUserId = new MutableLiveData<>();
-
-    public WeightViewModel(@NonNull Application application) {
-        super(application);
-        weightRepo = WeightTrackerRepository.getInstance(application.getApplicationContext());
+    public MutableLiveData<List<Weight>> getWeightList() {
+        weightListLiveData = FirebaseRepo.getInstance().getWeightList();
+        return weightListLiveData;
     }
 
-    public void setLoggedInUserId(long userId) {
-        loggedInUserId.setValue(userId);
+    public MutableLiveData<Weight> getWeightById(String id) {
+        weightLiveData = FirebaseRepo.getInstance().getWeightById(id);
+        return weightLiveData;
     }
 
-    public LiveData<List<Weight>> getWeightList = Transformations.switchMap(loggedInUserId, userId ->
-            weightRepo.getWeightList(userId));
+    public MutableLiveData<Float> getGoalWeight() {
+        goalWeightLiveData = FirebaseRepo.getInstance().getGoalWeight();
+        return goalWeightLiveData;
+    }
 
-    public LiveData<Weight> getCurrentWeight = Transformations.switchMap(loggedInUserId, userId -> weightRepo.getCurrentWeight(userId));
+    public MutableLiveData<Weight> getCurrentWeight() {
+        currentWeightLiveData = FirebaseRepo.getInstance().getCurrentWeight();
+        return currentWeightLiveData;
+    }
 
-    public LiveData<Weight> getStartingWeight = Transformations.switchMap(loggedInUserId, userId-> weightRepo.getStartingWeight(userId));
-
-    public LiveData<GoalWeight> getGoalWeight = Transformations.switchMap(loggedInUserId, userId ->  weightRepo.getGoalWeight(userId));
+    public MutableLiveData<Weight> getStartingWeight() {
+        startingWeightLiveData = FirebaseRepo.getInstance().getStartingWeight();
+        return startingWeightLiveData;
+    }
 
     // Use the starting weight, current weight, and goal weight to get the percentage of weight lost. returns 0 if any variable is not set
-    public LiveData<Float> getTotalLossPercentage = Transformations.switchMap(loggedInUserId, userId -> {
-        LiveData<Weight> startingWeightLiveData = getStartingWeight;
-        LiveData<Weight> currentWeightLiveData = getCurrentWeight;
-        LiveData<GoalWeight> goalWeightLiveData = getGoalWeight;
-
+    public MutableLiveData<Float> getTotalLossPercent() {
         MediatorLiveData<Float> result = new MediatorLiveData<>();
 
         result.addSource(startingWeightLiveData, value ->
-            result.setValue(calculateResult(startingWeightLiveData, currentWeightLiveData, goalWeightLiveData)));
+                result.postValue(calculateLossPercent(startingWeightLiveData, currentWeightLiveData, goalWeightLiveData)));
         result.addSource(currentWeightLiveData, value ->
-                result.setValue(calculateResult(startingWeightLiveData, currentWeightLiveData, goalWeightLiveData)));
+                result.postValue(calculateLossPercent(startingWeightLiveData, currentWeightLiveData, goalWeightLiveData)));
         result.addSource(goalWeightLiveData, value ->
-                result.setValue(calculateResult(startingWeightLiveData, currentWeightLiveData, goalWeightLiveData)));
+                result.postValue(calculateLossPercent(startingWeightLiveData, currentWeightLiveData, goalWeightLiveData)));
         return result;
-    });
+    }
 
-    // Use the starting weight and current weight to get the total weight lost.
-    public LiveData<Float> getTotalLossWeight = Transformations.switchMap(loggedInUserId, userId -> {
-        LiveData<Weight> startingWeightLiveData = getStartingWeight;
-        LiveData<Weight> currentWeightLiveData = getCurrentWeight;
-
+    public MutableLiveData<Float> getTotalLossWeight() {
         MediatorLiveData<Float> result = new MediatorLiveData<>();
 
         result.addSource(startingWeightLiveData, value -> {
-                if (currentWeightLiveData.getValue() != null && value != null)
-                    result.setValue(value.getWeight() - currentWeightLiveData.getValue().getWeight());
-                else
-                    result.setValue(0F);
+            result.postValue(calculateTotalLoss(startingWeightLiveData, currentWeightLiveData));
         });
         result.addSource(currentWeightLiveData, value -> {
-            if (startingWeightLiveData.getValue() != null && value != null)
-                result.setValue(startingWeightLiveData.getValue().getWeight() - value.getWeight());
-            else
-                result.setValue(0F);
+            result.postValue(calculateTotalLoss(startingWeightLiveData, currentWeightLiveData));
         });
 
         return result;
-    });
+    }
 
-    // Use the starting weight and goal weight to get the total weight loss goal.
-    public LiveData<Float> getTargetLossWeight = Transformations.switchMap(loggedInUserId, userId -> {
-        LiveData<Weight> startingWeightLiveData = getStartingWeight;
-        LiveData<GoalWeight> goalWeightLiveData = getGoalWeight;
-
+    public MutableLiveData<Float> getTargetLoss() {
         MediatorLiveData<Float> result = new MediatorLiveData<>();
 
         result.addSource(startingWeightLiveData, value -> {
-            if (goalWeightLiveData.getValue() != null && value != null)
-                result.setValue(value.getWeight() - goalWeightLiveData.getValue().getWeight());
-            else
-                result.setValue(0F);
+            result.postValue(calculateTargetLoss(startingWeightLiveData, goalWeightLiveData));
         });
         result.addSource(goalWeightLiveData, value -> {
-            if (startingWeightLiveData.getValue() != null && value != null)
-                result.setValue(startingWeightLiveData.getValue().getWeight() - value.getWeight());
-            else
-                result.setValue(0F);
+            result.postValue(calculateTargetLoss(startingWeightLiveData, goalWeightLiveData));
         });
 
         return result;
-    });
+    }
 
-    // Use the target weight loss and total weight loss so far to get the amount of weight left to lose
-    public LiveData<Float> getTargetLeftWeight = Transformations.switchMap(loggedInUserId, userId -> {
-        LiveData<Float> targetLossLiveData = getTargetLossWeight;
-        LiveData<Float> totalLossLiveData = getTotalLossWeight;
-
+    public MutableLiveData<Float> getTargetLeft() {
         MediatorLiveData<Float> result = new MediatorLiveData<>();
 
-        result.addSource(targetLossLiveData, value -> {
-            if (totalLossLiveData.getValue() != null && value != null)
-                result.setValue(value - totalLossLiveData.getValue());
-            else
-                result.setValue(0F);
+        result.addSource(startingWeightLiveData, value -> {
+            result.postValue(calculateTargetLeft(startingWeightLiveData, currentWeightLiveData, goalWeightLiveData));
         });
-        result.addSource(totalLossLiveData, value -> {
-            if (targetLossLiveData.getValue() != null && value != null)
-                result.setValue(targetLossLiveData.getValue() - value);
-            else
-                result.setValue(0F);
+        result.addSource(currentWeightLiveData, value -> {
+            result.postValue(calculateTargetLeft(startingWeightLiveData, currentWeightLiveData, goalWeightLiveData));
+        });
+        result.addSource(goalWeightLiveData, value -> {
+            result.postValue(calculateTargetLeft(startingWeightLiveData, currentWeightLiveData, goalWeightLiveData));
         });
 
         return result;
-    });
-
-    public Weight getWeight(long id) { return weightRepo.getWeight(id); }
-
-    public void addWeight(Weight weight) {
-        weightRepo.addWeight(weight);
     }
 
-    public void updateWeight(Weight weight) {
-        weightRepo.updateWeight(weight);
-    }
-
-    public void deleteWeight(Weight weight) {
-        weightRepo.deleteWeight(weight);
-    }
-
-    public void addGoalWeight(GoalWeight goalWeight) { weightRepo.addGoalWeight(goalWeight); }
-
-    public void updateGoalWeight(GoalWeight goalWeight) { weightRepo.updateGoalWeight(goalWeight); }
-
-    // Check if the current weight is at or below the goal weight and return true if goal has been reached
-    public void checkGoalReached(float currentWeight) {
-        if (getGoalWeight.getValue() == null) {
-            goalReached.setValue(false);
-            return;
-        }
-
-        float goalWeight = getGoalWeight.getValue().getWeight();
-        goalReached.setValue(currentWeight <= goalWeight);
-    }
-
-    // Calculate the weight loss percentage
-    private float calculateResult(LiveData<Weight> startingLive, LiveData<Weight> currentLive, LiveData<GoalWeight> goalLive) {
+    private float calculateTotalLoss(LiveData<Weight> startingLive, LiveData<Weight> currentLive) {
         Weight starting = startingLive.getValue();
         Weight current = currentLive.getValue();
-        GoalWeight goal = goalLive.getValue();
 
-        if (starting == null || current == null || goal == null) {
+        if (starting == null || current == null) {
+            return 0;
+        }
+
+        return starting.getWeight() - current.getWeight();
+    }
+
+    private float calculateTargetLoss(LiveData<Weight> startingLive, LiveData<Float> goalLive) {
+        Weight starting = startingLive.getValue();
+
+        if (starting == null || goalLive.getValue() == null) {
+            return 0;
+        }
+
+        return starting.getWeight() - goalLive.getValue();
+    }
+
+    private float calculateTargetLeft(LiveData<Weight> startingLive, LiveData<Weight> currentLive, LiveData<Float> goalLive) {
+        Weight starting = startingLive.getValue();
+        Weight current = currentLive.getValue();
+
+        if (starting == null || current == null || goalLive.getValue() == null) {
             return 0;
         }
 
         float currentWeightLoss = starting.getWeight() - current.getWeight();
-        float totalLossGoal = starting.getWeight() - goal.getWeight();
+        float totalLossGoal = starting.getWeight() - goalLive.getValue();
+
+        return totalLossGoal - currentWeightLoss;
+    }
+
+    private float calculateLossPercent(LiveData<Weight> startingLive, LiveData<Weight> currentLive, LiveData<Float> goalLive) {
+        Weight starting = startingLive.getValue();
+        Weight current = currentLive.getValue();
+
+        if (starting == null || current == null || goalLive.getValue() == null) {
+            return 0;
+        }
+
+        float currentWeightLoss = starting.getWeight() - current.getWeight();
+        float totalLossGoal = starting.getWeight() - goalLive.getValue();
 
         return Math.min(((currentWeightLoss / totalLossGoal) * 100), 100);
+    }
+
+    public void addWeight(Weight weight) {
+        FirebaseRepo.getInstance().addWeight(weight);
+    }
+
+    public void deleteWeight(Weight weight) {
+        FirebaseRepo.getInstance().deleteWeight(weight);
+    }
+
+    public void addGoalWeight(float goalWeight) { FirebaseRepo.getInstance().addGoalWeight(goalWeight); }
+
+    public void updateGoalWeight(float goalWeight) { FirebaseRepo.getInstance().updateGoalWeight(goalWeight); }
+
+    // Check if the current weight is at or below the goal weight and return true if goal has been reached
+    public MutableLiveData<Boolean> checkGoalReached() {
+        if (goalWeightLiveData.getValue() == null || currentWeightLiveData.getValue() == null) {
+            goalReachedLiveData.postValue(false);
+            return goalReachedLiveData;
+        }
+
+        goalReachedLiveData.postValue(currentWeightLiveData.getValue().getWeight() <= goalWeightLiveData.getValue());
+        return goalReachedLiveData;
     }
 }

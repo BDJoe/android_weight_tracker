@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.google.gms.google.services)
 }
 
 android {
@@ -31,9 +32,13 @@ android {
 }
 
 dependencies {
-    implementation libs.room.runtime
     implementation libs.circularseekbar
-    annotationProcessor libs.room.compiler
+    implementation libs.firebase.firestore
+    implementation libs.firebase.auth
+    implementation libs.credentials
+    implementation libs.credentials.play.services.auth
+    implementation libs.googleid
+    implementation libs.firebase.analytics
     implementation libs.appcompat
     implementation libs.material
     implementation libs.activity
@@ -42,6 +47,7 @@ dependencies {
     implementation libs.google.material
     implementation libs.navigation.ui
     implementation libs.navigation.fragment
+    implementation libs.lifecycle.livedata
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core

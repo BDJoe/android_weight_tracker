@@ -1,35 +1,19 @@
 package com.josephlimbert.weighttracker.model;
 
-import androidx.room.ColumnInfo;
-import androidx.room.Entity;
-import androidx.room.ForeignKey;
-import androidx.room.Index;
-import androidx.room.PrimaryKey;
+import com.google.firebase.Timestamp;
 
 import java.util.Date;
 
-@Entity(tableName = "Weights", indices = {@Index(value = {"recorded_date"}, unique = true)}, foreignKeys = @ForeignKey(entity = User.class, parentColumns = "id", childColumns = "user_id", onDelete = ForeignKey.CASCADE))
 public class Weight {
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id")
-    private long id;
+    private String id;
 
-    @ColumnInfo(name = "weight")
     private float weight;
 
-    @ColumnInfo(name = "recorded_date")
-    private Date recordedDate;
+    private Timestamp recordedDate;
 
-    @ColumnInfo(name = "user_id")
-    private long userId;
+    private String userId;
 
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
+    public Weight () {}
 
     public float getWeight() {
         return weight;
@@ -39,20 +23,28 @@ public class Weight {
         this.weight = weight;
     }
 
-    public Date getRecordedDate() {
+    public Timestamp getRecordedDate() {
         return recordedDate;
     }
 
-    public void setRecordedDate(Date recordedDate) {
+    public void setRecordedDate(Timestamp recordedDate) {
         this.recordedDate = recordedDate;
     }
 
-    public long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 }
 

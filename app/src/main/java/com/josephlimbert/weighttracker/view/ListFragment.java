@@ -7,25 +7,29 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.josephlimbert.weighttracker.R;
 import com.josephlimbert.weighttracker.model.Weight;
-import com.josephlimbert.weighttracker.viewmodel.UserViewModel;
 import com.josephlimbert.weighttracker.viewmodel.WeightViewModel;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
 public class ListFragment extends Fragment {
     private RecyclerView recyclerView;
+    WeightViewModel weightViewModel;
+    WeightListAdapter adapter;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -35,14 +39,10 @@ public class ListFragment extends Fragment {
 
         // Initialize variables
         recyclerView = rootView.findViewById(R.id.history_list);
-        WeightViewModel weightViewModel = new ViewModelProvider(requireActivity()).get(WeightViewModel.class);
-        UserViewModel userViewModel = new ViewModelProvider(requireActivity()).get(UserViewModel.class);
-
-        // Get the userId from the user view model and set it on the weight view model so we can load data
-        userViewModel.getLoggedInUserId().observe(getViewLifecycleOwner(), weightViewModel::setLoggedInUserId);
-
-        // Get the weight list and send it to a recycler view
-        weightViewModel.getWeightList.observe(getViewLifecycleOwner(), weights -> recyclerView.setAdapter(new WeightListAdapter(weights, weightViewModel)));
+        weightViewModel = new ViewModelProvider(requireActivity()).get(WeightViewModel.class);
+        adapter = new WeightListAdapter(weightViewModel);
+        recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+        recyclerView.setAdapter(adapter);
 
         // add a divider between each weight on the recycler view list
         DividerItemDecoration divider = new DividerItemDecoration(recyclerView.getContext(),
@@ -52,14 +52,23 @@ public class ListFragment extends Fragment {
         return rootView;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        weightViewModel.getWeightList().observe(getViewLifecycleOwner(), weightList -> {
+            adapter.setWeightList(weightList);
+        });
+    }
+
     private class WeightListAdapter extends RecyclerView.Adapter<WeightListHolder> {
 
-        private final List<Weight> weightList;
+        private List<Weight> weightList;
         private final WeightViewModel viewModel;
         private final FragmentManager fragmentManager = getParentFragmentManager();
 
-        public WeightListAdapter(List<Weight> weightList, WeightViewModel viewModel) {
-            this.weightList = weightList;
+        public WeightListAdapter(WeightViewModel viewModel) {
+            this.weightList = new ArrayList<>();
             this.viewModel = viewModel;
         }
 
@@ -81,6 +90,11 @@ public class ListFragment extends Fragment {
         public int getItemCount() {
             return weightList.size();
         }
+
+        public void setWeightList(List<Weight> weightList) {
+            this.weightList = weightList;
+            notifyDataSetChanged();
+        }
     }
 
     private static class WeightListHolder extends RecyclerView.ViewHolder {
@@ -101,7 +115,7 @@ public class ListFragment extends Fragment {
             // Initialize variables to format the date into the day of week and day
             SimpleDateFormat dayOfMonthFormat = new SimpleDateFormat(DateFormat.DAY, Locale.getDefault());
             SimpleDateFormat dayOfWeekFormat = new SimpleDateFormat(DateFormat.ABBR_WEEKDAY, Locale.getDefault());
-            Date recordedDate = weight.getRecordedDate();
+            Date recordedDate = weight.getRecordedDate().toDate();
             String formattedDayOfWeek = dayOfWeekFormat.format(recordedDate);
             String formattedDayOfMonth = dayOfMonthFormat.format(recordedDate);
             String formattedWeight = weight.getWeight() + " Lbs";
@@ -124,7 +138,7 @@ public class ListFragment extends Fragment {
                 // create a bundle and send the weight ID to the sheet so we can edit the weight
                 Bundle bundle = new Bundle();
 
-                bundle.putLong("weightId", weight.getId());
+                bundle.putString("weightId", weight.getId());
                 sheet.setArguments(bundle);
                 sheet.show(manager, "edit weight");
             });
