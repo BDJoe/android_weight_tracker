@@ -5,6 +5,7 @@ import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -44,7 +45,6 @@ public class MainActivity extends AppCompatActivity {
             AppBarConfiguration appBarConfig = new AppBarConfiguration.Builder(
                     R.id.navigation_home, R.id.navigation_history, R.id.navigation_settings)
                     .build();
-
             NavigationUI.setupActionBarWithNavController(this, navController, appBarConfig);
             NavigationUI.setupWithNavController(navView, navController);
         }

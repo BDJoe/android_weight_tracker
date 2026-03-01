@@ -1,6 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+<androidx.constraintlayout.widget.ConstraintLayout
+    android:id="@+id/month_divider"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:visibility="visible">
+    <TextView
+        android:id="@+id/month_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        style="?attr/textAppearanceTitleLarge"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:paddingVertical="8dp"
+        android:paddingEnd="10dp"
+        android:paddingStart="8dp"/>
+
+    <com.google.android.material.divider.MaterialDivider
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toEndOf="@+id/month_text"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+<com.google.android.material.card.MaterialCardView
+    android:id="@+id/weight_progress_card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    style="?attr/materialCardViewOutlinedStyle"
+    >
+<LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:minHeight="?attr/minTouchTargetSize"
@@ -18,7 +57,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="bottom | center"
             android:maxLines="1" />
 
         <TextView
@@ -27,40 +66,66 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:gravity="center"
+            android:gravity="top | center"
             android:maxLines="1" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/weight"
-        style="?attr/textAppearanceBodyLarge"
-        android:layout_width="0dp"
+        style="?attr/textAppearanceTitleLarge"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
         android:layout_marginStart="15dp"
-        android:layout_weight="1"
+        android:layout_marginEnd="30dp"
         android:maxLines="1" />
 
+    <ImageView
+        android:id="@+id/loss_gain_icon"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:layout_gravity="center"
+        android:layout_weight="1" />
+
+    <TextView
+        android:id="@+id/loss_gain_text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        style="?attr/textAppearanceBodyLargeEmphasized"
+        android:layout_weight="4"/>
+
     <Button
-        android:id="@+id/edit_weight_button"
-        style="?attr/materialIconButtonFilledStyle"
+        android:id="@+id/menu_button"
+        style="?attr/materialIconButtonOutlinedStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginVertical="5dp"
         android:layout_marginEnd="10dp"
-        android:backgroundTint="?attr/colorPrimary"
-        android:contentDescription="@string/edit_entry"
-        app:icon="@drawable/edit_icon" />
+        app:icon="@drawable/menu_icon" />
 
-    <Button
-        android:id="@+id/delete_weight_button"
-        style="?attr/materialIconButtonFilledStyle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginVertical="5dp"
-        android:layout_marginEnd="10dp"
-        android:backgroundTint="?attr/colorError"
-        android:contentDescription="@string/delete_entry"
-        app:icon="@drawable/delete_icon" />
+<!--    <Button-->
+<!--        android:id="@+id/edit_weight_button"-->
+<!--        style="?attr/materialIconButtonFilledStyle"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_marginVertical="5dp"-->
+<!--        android:layout_marginEnd="10dp"-->
+<!--        android:backgroundTint="?attr/colorPrimary"-->
+<!--        android:contentDescription="@string/edit_entry"-->
+<!--        app:icon="@drawable/edit_icon" />-->
 
+<!--    <Button-->
+<!--        android:id="@+id/delete_weight_button"-->
+<!--        style="?attr/materialIconButtonFilledStyle"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_marginVertical="5dp"-->
+<!--        android:layout_marginEnd="10dp"-->
+<!--        android:backgroundTint="?attr/colorError"-->
+<!--        android:contentDescription="@string/delete_entry"-->
+<!--        app:icon="@drawable/delete_icon" />-->
+
+</LinearLayout>
+</com.google.android.material.card.MaterialCardView>
 </LinearLayout>
