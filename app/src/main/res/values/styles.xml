@@ -22,4 +22,10 @@
         <item name="cornerFamily">cut</item>
         <item name="cornerSize">8dp</item>
     </style>
+
+    <style name="ChartStyle">
+        <item name="layers">line</item>
+        <item name="showBottomAxis">true</item>
+        <item name="showStartAxis">true</item>
+    </style>
 </resources>

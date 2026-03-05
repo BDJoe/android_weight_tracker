@@ -3,6 +3,7 @@ package com.josephlimbert.weighttracker.view;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.icu.text.DateFormat;
@@ -31,6 +32,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.jjoe64.graphview.DefaultLabelFormatter;
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.helper.DateAsXAxisLabelFormatter;
 import com.jjoe64.graphview.series.DataPoint;
@@ -38,23 +40,34 @@ import com.jjoe64.graphview.series.LineGraphSeries;
 import com.josephlimbert.weighttracker.R;
 import com.josephlimbert.weighttracker.model.Weight;
 import com.josephlimbert.weighttracker.viewmodel.WeightViewModel;
+import com.patrykandpatrick.vico.views.cartesian.CartesianChartView;
+import com.patrykandpatrick.vico.views.cartesian.data.CartesianChartModel;
+import com.patrykandpatrick.vico.views.cartesian.data.CartesianChartModelProducer;
+import com.patrykandpatrick.vico.views.cartesian.data.CartesianLayerModel;
+import com.patrykandpatrick.vico.views.cartesian.data.LineCartesianLayerModel;
+import com.patrykandpatrick.vico.views.cartesian.layer.LineCartesianLayer;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import kotlin.Unit;
+import kotlin.jvm.functions.Function1;
+
 public class ListFragment extends Fragment {
     WeightViewModel weightViewModel;
     WeightListAdapter adapter;
     GraphView graph;
+    CartesianChartView chartView;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View rootView = inflater.inflate(R.layout.fragment_list, container, false);
-        graph = (GraphView) rootView.findViewById(R.id.graph);
+        //graph = (GraphView) rootView.findViewById(R.id.graph);
+        chartView = rootView.findViewById(R.id.chart_view);
         // Initialize variables
         RecyclerView recyclerView = rootView.findViewById(R.id.history_list);
         weightViewModel = new ViewModelProvider(requireActivity()).get(WeightViewModel.class);
@@ -162,21 +175,28 @@ public class ListFragment extends Fragment {
 
         public void setWeightList(List<Weight> weightList) {
             this.weightList = weightList;
+            SimpleDateFormat dayOfMonthFormat = new SimpleDateFormat(DateFormat.DAY, Locale.getDefault());
+            SimpleDateFormat monthFormat = new SimpleDateFormat(DateFormat.NUM_MONTH, Locale.getDefault());
 
             if (!weightList.isEmpty()) {
                 LineGraphSeries<DataPoint> series = new LineGraphSeries<>();
                 for (int i = weightList.size(); i > 0; i--) {
-                    DataPoint point = new DataPoint(weightList.get(i - 1).getRecordedDate().toDate(), weightList.get(i - 1).getWeight());
+                    DataPoint point = new DataPoint(weightList.size() - i, weightList.get(i - 1).getWeight());
                     series.appendData(point, true, weightList.size());
                 }
-                series.setDrawDataPoints(true);
                 graph.addSeries(series);
-                graph.getGridLabelRenderer().setLabelFormatter(new DateAsXAxisLabelFormatter(requireActivity()));
-                graph.getGridLabelRenderer().setNumHorizontalLabels(weightList.size()); // only 4 because of the space
-                graph.getGridLabelRenderer().setHorizontalLabelsAngle(45);
-                graph.getViewport().setMinX(weightList.get(weightList.size() - 1).getRecordedDate().toDate().getTime());
-                graph.getViewport().setMaxX(weightList.get(0).getRecordedDate().toDate().getTime());
-                graph.getViewport().setXAxisBoundsManual(true);
+                graph.getGridLabelRenderer().setLabelFormatter(new DefaultLabelFormatter() {
+                    @Override
+                    public String formatLabel(double value, boolean isValueX) {
+                        if (isValueX) {
+                            int index = (int) (weightList.size() - value - 1);
+                            return monthFormat.format(weightList.get(index).getRecordedDate().toDate()) + "/" + dayOfMonthFormat.format(weightList.get(index).getRecordedDate().toDate());
+                        } else {
+                            return super.formatLabel(value, isValueX);
+                        }
+                    }
+                });
+                graph.getGridLabelRenderer().setNumHorizontalLabels(weightList.size());
             }
 
             notifyDataSetChanged();

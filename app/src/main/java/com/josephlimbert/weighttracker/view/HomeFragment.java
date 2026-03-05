@@ -6,21 +6,12 @@ import android.content.SharedPreferences;
 import android.icu.text.DateFormat;
 import android.os.Bundle;
 
-import androidx.annotation.Nullable;
-import androidx.appcompat.widget.Toolbar;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.view.MenuHost;
 import androidx.core.view.MenuProvider;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Lifecycle;
-import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
-import androidx.navigation.ui.AppBarConfiguration;
-import androidx.navigation.ui.NavigationUI;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import android.telephony.SmsManager;
 import android.util.Log;
@@ -35,14 +26,11 @@ import android.widget.TextView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.josephlimbert.weighttracker.R;
-import com.josephlimbert.weighttracker.model.CardItem;
 import com.josephlimbert.weighttracker.viewmodel.UserViewModel;
 import com.josephlimbert.weighttracker.viewmodel.WeightViewModel;
 
 import org.jspecify.annotations.NonNull;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 
 import me.tankery.lib.circularseekbar.CircularSeekBar;
