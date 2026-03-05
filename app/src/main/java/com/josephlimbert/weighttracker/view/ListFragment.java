@@ -39,13 +39,8 @@ import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 import com.josephlimbert.weighttracker.R;
 import com.josephlimbert.weighttracker.model.Weight;
+import com.josephlimbert.weighttracker.viewmodel.UserViewModel;
 import com.josephlimbert.weighttracker.viewmodel.WeightViewModel;
-import com.patrykandpatrick.vico.views.cartesian.CartesianChartView;
-import com.patrykandpatrick.vico.views.cartesian.data.CartesianChartModel;
-import com.patrykandpatrick.vico.views.cartesian.data.CartesianChartModelProducer;
-import com.patrykandpatrick.vico.views.cartesian.data.CartesianLayerModel;
-import com.patrykandpatrick.vico.views.cartesian.data.LineCartesianLayerModel;
-import com.patrykandpatrick.vico.views.cartesian.layer.LineCartesianLayer;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -59,15 +54,13 @@ public class ListFragment extends Fragment {
     WeightViewModel weightViewModel;
     WeightListAdapter adapter;
     GraphView graph;
-    CartesianChartView chartView;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View rootView = inflater.inflate(R.layout.fragment_list, container, false);
-        //graph = (GraphView) rootView.findViewById(R.id.graph);
-        chartView = rootView.findViewById(R.id.chart_view);
+        graph = (GraphView) rootView.findViewById(R.id.graph);
         // Initialize variables
         RecyclerView recyclerView = rootView.findViewById(R.id.history_list);
         weightViewModel = new ViewModelProvider(requireActivity()).get(WeightViewModel.class);
@@ -91,7 +84,6 @@ public class ListFragment extends Fragment {
 
         private List<Weight> weightList;
         private final WeightViewModel viewModel;
-        private final FragmentManager fragmentManager = getParentFragmentManager();
         private String currentMonth = "";
 
         public WeightListAdapter(WeightViewModel viewModel) {
@@ -178,6 +170,7 @@ public class ListFragment extends Fragment {
             SimpleDateFormat dayOfMonthFormat = new SimpleDateFormat(DateFormat.DAY, Locale.getDefault());
             SimpleDateFormat monthFormat = new SimpleDateFormat(DateFormat.NUM_MONTH, Locale.getDefault());
 
+
             if (!weightList.isEmpty()) {
                 LineGraphSeries<DataPoint> series = new LineGraphSeries<>();
                 for (int i = weightList.size(); i > 0; i--) {
@@ -185,18 +178,35 @@ public class ListFragment extends Fragment {
                     series.appendData(point, true, weightList.size());
                 }
                 graph.addSeries(series);
+                weightViewModel.getGoalWeight().observe(getViewLifecycleOwner(), goalWeight -> {
+                    LineGraphSeries<DataPoint> goalSeries = new LineGraphSeries<>(new DataPoint[] {
+                            new DataPoint(0, goalWeight),
+                            new DataPoint(weightList.size(), goalWeight)
+                    });
+                    goalSeries.setColor(requireContext().getColor(R.color.md_theme_success));
+                    goalSeries.setTitle("Goal Weight");
+                    goalSeries.setThickness(8);
+                    graph.addSeries(goalSeries);
+                    graph.getViewport().setMinY(goalWeight - 20);
+                });
+
+                graph.getViewport().setXAxisBoundsManual(true);
+                graph.getViewport().setMinX(0);
+                graph.getViewport().setMaxX(weightList.size() - 1);
                 graph.getGridLabelRenderer().setLabelFormatter(new DefaultLabelFormatter() {
                     @Override
                     public String formatLabel(double value, boolean isValueX) {
                         if (isValueX) {
-                            int index = (int) (weightList.size() - value - 1);
-                            return monthFormat.format(weightList.get(index).getRecordedDate().toDate()) + "/" + dayOfMonthFormat.format(weightList.get(index).getRecordedDate().toDate());
-                        } else {
-                            return super.formatLabel(value, isValueX);
+                            if (value < weightList.size()) {
+                                int index = (int) (weightList.size() - value - 1);
+                                return monthFormat.format(weightList.get(index).getRecordedDate().toDate()) + "/" + dayOfMonthFormat.format(weightList.get(index).getRecordedDate().toDate());
+                            }
                         }
+                            return super.formatLabel(value, isValueX);
+
                     }
                 });
-                graph.getGridLabelRenderer().setNumHorizontalLabels(weightList.size());
+                graph.getGridLabelRenderer().setNumHorizontalLabels(Math.min(weightList.size(), 5));
             }
 
             notifyDataSetChanged();
