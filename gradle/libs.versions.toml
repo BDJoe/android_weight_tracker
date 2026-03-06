@@ -20,8 +20,10 @@ credentialsPlayServicesAuth = "1.5.0"
 googleid = "1.2.0"
 firebaseAnalytics = "23.0.0"
 lifecycleLivedata = "2.10.0"
+graphView = "4.2.2"
 
 [libraries]
+graph-view = { group = "com.jjoe64", name = "graphview", version.ref = "graphView"}
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
