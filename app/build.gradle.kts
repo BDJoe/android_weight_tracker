@@ -1,6 +1,8 @@
 plugins {
+    alias(libs.plugins.ksp)
     alias(libs.plugins.android.application)
     alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.android.hilt)
 }
 
 android {
@@ -35,6 +37,8 @@ android {
 }
 
 dependencies {
+    implementation(libs.android.hilt)
+    ksp(libs.android.hilt.compiler)
     implementation(libs.graph.view)
     implementation(libs.circularseekbar)
     implementation(libs.firebase.firestore)
@@ -48,7 +52,6 @@ dependencies {
     implementation(libs.activity)
     implementation(libs.constraintlayout)
     implementation(libs.recyclerview)
-    implementation(libs.google.material)
     implementation(libs.navigation.ui)
     implementation(libs.navigation.fragment)
     implementation(libs.lifecycle.livedata)

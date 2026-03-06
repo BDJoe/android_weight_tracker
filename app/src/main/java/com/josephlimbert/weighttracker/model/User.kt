@@ -1,44 +1,14 @@
-package com.josephlimbert.weighttracker.model;
+package com.josephlimbert.weighttracker.model
 
-public class User {
-    private String id;
-    private String email;
+class User {
+    @JvmField
+    var id: String? = null
+    @JvmField
+    var email: String? = null
 
-    private float goalWeight;
+    @JvmField
+    var goalWeight: Float = 0f
 
-    private String phone;
-
-    public User() {}
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public float getGoalWeight() {
-        return goalWeight;
-    }
-
-    public void setGoalWeight(float goalWeight) {
-        this.goalWeight = goalWeight;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
+    @JvmField
+    var phone: String? = null
 }

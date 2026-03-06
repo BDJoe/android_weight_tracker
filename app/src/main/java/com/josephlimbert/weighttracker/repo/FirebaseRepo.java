@@ -241,7 +241,7 @@ public class FirebaseRepo {
                     if (snapshot != null && snapshot.exists()) {
                         User user = snapshot.toObject(User.class);
                         if (user != null) {
-                            float goal = user.getGoalWeight();
+                            float goal = user.goalWeight;
                             liveGoalWeight.postValue(goal);
                         } else {
                             Log.d(TAG, "Current user: null");
@@ -288,9 +288,9 @@ public class FirebaseRepo {
             return;
         }
         User newUser = new User();
-        newUser.setId(user.getUid());
-        newUser.setEmail(user.getEmail());
-        db.collection(USER).document(newUser.getId()).set(newUser)
+        newUser.id = user.getUid();
+        newUser.email = user.getEmail();
+        db.collection(USER).document(newUser.id).set(newUser)
                 .addOnSuccessListener(unused -> Log.d("ADD", "Document added with id: " + user.getUid()))
                 .addOnFailureListener(e -> Log.w(TAG, "failed to add user", e));
     }

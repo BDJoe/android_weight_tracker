@@ -37,4 +37,7 @@
     <string name="remaining">Remaining</string>
     <string name="unit_pounds">" lbs"</string>
     <string name="unit_kilos">" kgs"</string>
+    <string name="generic_error">An unknown error has occurred</string>
+    <string name="error_finding_weight_by_id">Error finding weight by ID</string>
+    <string name="could_not_find_account">Could not find account</string>
 </resources>

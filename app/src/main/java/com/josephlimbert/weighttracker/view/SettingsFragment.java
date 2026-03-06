@@ -74,7 +74,7 @@ public class SettingsFragment extends Fragment {
 
         userViewModel.getUserProfile().observe(getViewLifecycleOwner(), user -> {
             if (user != null) {
-                String phone = user.getPhone();
+                String phone = user.phone;
                 if (phone != null){
                     submitPhoneButton.setVisibility(View.GONE);
                     phoneText.setText(phone);
