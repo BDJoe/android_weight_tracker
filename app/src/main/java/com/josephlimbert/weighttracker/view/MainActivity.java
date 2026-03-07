@@ -21,6 +21,9 @@ import com.google.android.material.loadingindicator.LoadingIndicator;
 import com.josephlimbert.weighttracker.R;
 import com.josephlimbert.weighttracker.viewmodel.UserViewModel;
 
+import dagger.hilt.android.AndroidEntryPoint;
+
+@AndroidEntryPoint
 public class MainActivity extends AppCompatActivity {
 
     @Override

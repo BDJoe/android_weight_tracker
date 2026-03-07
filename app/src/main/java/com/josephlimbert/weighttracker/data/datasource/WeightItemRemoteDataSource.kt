@@ -1,6 +1,7 @@
 package com.josephlimbert.weighttracker.data.datasource
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.dataObjects
 import com.google.firebase.firestore.toObject
 import com.josephlimbert.weighttracker.data.model.Weight
@@ -19,6 +20,7 @@ class WeightItemRemoteDataSource @Inject constructor(
             firestore
                 .collection(WEIGHT_ITEMS_COLLECTION)
                 .whereEqualTo(USER_ID_FIELD, userId)
+                .orderBy("recordedDate", Query.Direction.DESCENDING)
                 .dataObjects()
         }
     }

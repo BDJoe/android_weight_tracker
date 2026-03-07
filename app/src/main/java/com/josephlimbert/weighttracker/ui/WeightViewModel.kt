@@ -10,10 +10,13 @@ import com.josephlimbert.weighttracker.data.repository.AuthRepository
 import com.josephlimbert.weighttracker.data.repository.WeightItemRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
@@ -58,7 +61,11 @@ class WeightViewModel @Inject constructor(
                 )
             } else { 0.0 }
             return@combine result
-        } as StateFlow<Double>
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000L),
+            initialValue = 0.0
+        )
 
     val totalLossWeight: StateFlow<Double> =
     combine(_startingWeight, _currentWeight) { starting, current ->
@@ -66,7 +73,11 @@ class WeightViewModel @Inject constructor(
             starting.weight - current.weight
         } else { 0.0 }
         return@combine result
-    } as StateFlow<Double>
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000L),
+        initialValue = 0.0
+    )
 
     val targetLoss: StateFlow<Double> =
         combine(_startingWeight, _goalWeight) { starting, goal ->
@@ -74,7 +85,11 @@ class WeightViewModel @Inject constructor(
             starting.weight - goal
         } else { 0.0 }
         return@combine result
-    } as StateFlow<Double>
+    }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000L),
+            initialValue = 0.0
+        )
 
     val targetLeft: StateFlow<Double> =
         combine(_startingWeight, _currentWeight, _goalWeight) { starting, current, goal ->
@@ -82,7 +97,11 @@ class WeightViewModel @Inject constructor(
             (starting.weight - goal) - (starting.weight - current.weight)
         } else { 0.0 }
         return@combine result
-    } as StateFlow<Double>
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000L),
+        initialValue = 0.0
+    )
 
     init {
         loadWeightList()
@@ -94,8 +113,8 @@ class WeightViewModel @Inject constructor(
                 .collect { weights ->
                     _weightList.value = weights
                     if (!weights.isEmpty()) {
-                        _startingWeight.value = weights[weights.size - 1]
-                        _currentWeight.value = weights[0]
+                        _startingWeight.value = weights.last()
+                        _currentWeight.value = weights.first()
                     }
                 }
             if (authRepository.currentUser != null) {
