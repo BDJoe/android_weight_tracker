@@ -2,6 +2,7 @@ package com.josephlimbert.weighttracker.data.repository
 
 import com.google.firebase.auth.FirebaseUser
 import com.josephlimbert.weighttracker.data.datasource.AuthRemoteDataSource
+import com.josephlimbert.weighttracker.data.model.User
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -21,6 +22,10 @@ class AuthRepository @Inject constructor(
 
     suspend fun signUpWithEmail(email: String, password: String) {
         authRemoteDataSource.linkAccount(email, password)
+    }
+
+    suspend fun getUserProfile(userId: String): User? {
+        return authRemoteDataSource.getUserProfile(userId)
     }
 
     fun signOut() {

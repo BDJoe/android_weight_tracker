@@ -69,6 +69,16 @@ class HomeFragment : Fragment(), MenuProvider {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
+                    weightViewModel.currentUser.collect { user ->
+                        if (user == null) return@collect
+                        Log.d("USER", user.isAnonymous.toString() + user.email)
+                        if (user.isAnonymous)
+                            signInReminder.visibility = View.VISIBLE
+                        else
+                            signInReminder.visibility = View.GONE
+                    }
+                }
+                launch {
                     weightViewModel.startingWeight.collect { weight ->
                         val weightText = if (weight != null) weight.weight
                             .toString() + weightUnits else "N/A"
@@ -229,7 +239,7 @@ class HomeFragment : Fragment(), MenuProvider {
     }
 
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
-        if (menuItem.getItemId() == R.id.add_weight_menu_item) {
+        if (menuItem.itemId == R.id.add_weight_menu_item) {
             showAddWeightDialog(requireView())
             return true
         }

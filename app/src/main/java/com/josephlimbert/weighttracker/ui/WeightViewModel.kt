@@ -2,9 +2,11 @@ package com.josephlimbert.weighttracker.ui
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseUser
 import com.josephlimbert.weighttracker.MainViewModel
 import com.josephlimbert.weighttracker.R
 import com.josephlimbert.weighttracker.data.model.ErrorMessage
+import com.josephlimbert.weighttracker.data.model.User
 import com.josephlimbert.weighttracker.data.model.Weight
 import com.josephlimbert.weighttracker.data.repository.AuthRepository
 import com.josephlimbert.weighttracker.data.repository.WeightItemRepository
@@ -29,6 +31,7 @@ class WeightViewModel @Inject constructor(
     private val weightItemRepository: WeightItemRepository
 ) : MainViewModel() {
     private val _isLoadingUser = MutableStateFlow(true)
+    private val _currentUser = MutableStateFlow<User?>(null)
     private val _weightList = MutableStateFlow<List<Weight>>(emptyList())
     private val _weight = MutableStateFlow<Weight?>(null)
     private val _currentWeight = MutableStateFlow<Weight?>(null)
@@ -37,6 +40,9 @@ class WeightViewModel @Inject constructor(
 
     val isLoadingUser: StateFlow<Boolean>
         get() = _isLoadingUser.asStateFlow()
+
+    val currentUser: StateFlow<User?>
+        get() = _currentUser.asStateFlow()
 
     val weightList: StateFlow<List<Weight>>
         get() = _weightList.asStateFlow()
@@ -105,6 +111,7 @@ class WeightViewModel @Inject constructor(
 
     init {
         loadWeightList()
+        loadCurrentUser()
     }
 
     private fun loadWeightList() {
@@ -117,20 +124,22 @@ class WeightViewModel @Inject constructor(
                         _currentWeight.value = weights.first()
                     }
                 }
-            if (authRepository.currentUser != null) {
-                //TODO: add user info to user repo to get goal weight
-            }
         }
     }
 
-    fun loadCurrentUser() {
-        launchCatching {
-            if (authRepository.currentUser == null) {
-                authRepository.createGuestAccount()
+    private fun loadCurrentUser() {
+            viewModelScope.launch {
+                authRepository.currentUserIdFlow.collect { userId ->
+                    if (userId != null) {
+                        val user = authRepository.getUserProfile(userId)
+                        if (user != null) {
+                            _goalWeight.value = user.goalWeight
+                            _currentUser.value = user
+                        }
+                    }
+                }
             }
-
             _isLoadingUser.value = false
-        }
     }
 
     fun getWeight(weightId: String) {
