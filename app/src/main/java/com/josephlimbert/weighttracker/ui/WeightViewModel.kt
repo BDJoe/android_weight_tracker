@@ -24,6 +24,11 @@ import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import javax.inject.Inject
 
+sealed class UiState {
+    object Loading : UiState()
+    data class Success(val weightList: List<Weight>) : UiState()
+    data class Error(val exception: Throwable) : UiState()
+}
 
 @HiltViewModel
 class WeightViewModel @Inject constructor(

@@ -25,6 +25,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.loadingindicator.LoadingIndicator
 import com.google.firebase.auth.FirebaseUser
 import com.josephlimbert.weighttracker.R
 import com.josephlimbert.weighttracker.data.model.Weight
@@ -45,6 +46,8 @@ class HomeFragment : Fragment(), MenuProvider {
         // Inflate the layout for this fragment
         val rootView = inflater.inflate(R.layout.fragment_home, container, false)
         // Initialize variables
+        val loadingLayout = rootView.findViewById<LoadingIndicator>(R.id.loading_layout)
+        val homeLayout = rootView.findViewById<ConstraintLayout>(R.id.home_layout)
         val addWeightFab = rootView.findViewById<FloatingActionButton>(R.id.add_weight_fab)
         val startingWeightText = rootView.findViewById<TextView>(R.id.start_weight_text)
         val currentWeightText = rootView.findViewById<TextView>(R.id.current_weight_text)
@@ -70,12 +73,17 @@ class HomeFragment : Fragment(), MenuProvider {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     weightViewModel.currentUser.collect { user ->
-                        if (user == null) return@collect
-                        Log.d("USER", user.isAnonymous.toString() + user.email)
-                        if (user.isAnonymous)
-                            signInReminder.visibility = View.VISIBLE
-                        else
-                            signInReminder.visibility = View.GONE
+                        if (user == null) {
+                            loadingLayout.visibility = View.VISIBLE
+                            homeLayout.visibility = View.GONE
+                        } else {
+                            loadingLayout.visibility = View.GONE
+                            homeLayout.visibility = View.VISIBLE
+                            if (user.isAnonymous)
+                                signInReminder.visibility = View.VISIBLE
+                            else
+                                signInReminder.visibility = View.GONE
+                        }
                     }
                 }
                 launch {
