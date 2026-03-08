@@ -178,6 +178,12 @@ class WeightViewModel @Inject constructor(
         }
     }
 
+    fun setGoalWeight(weight: Double) {
+        launchCatching {
+            authRepository.setGoalWeight(weight)
+        }
+    }
+
     private fun hashId(input: String): String {
         try {
             val md = MessageDigest.getInstance("MD5")

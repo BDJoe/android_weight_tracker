@@ -1,4 +1,4 @@
-package com.josephlimbert.weighttracker.view
+package com.josephlimbert.weighttracker.ui.history
 
 import android.content.Context
 import android.content.DialogInterface
@@ -31,10 +31,10 @@ import com.jjoe64.graphview.series.LineGraphSeries
 import com.josephlimbert.weighttracker.R
 import com.josephlimbert.weighttracker.data.model.Weight
 import com.josephlimbert.weighttracker.ui.WeightViewModel
+import com.josephlimbert.weighttracker.ui.sheet.AddWeightSheetFragment
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.util.Locale
-import kotlin.getValue
 import kotlin.math.min
 
 @AndroidEntryPoint
@@ -61,7 +61,8 @@ class HistoryFragment : Fragment() {
                     weightViewModel.weightList.collect { weights ->
                         adapter.setWeightList(weights)
                         val dayOfMonthFormat = SimpleDateFormat(DateFormat.DAY, Locale.getDefault())
-                        val monthFormat = SimpleDateFormat(DateFormat.NUM_MONTH, Locale.getDefault())
+                        val monthFormat =
+                            SimpleDateFormat(DateFormat.NUM_MONTH, Locale.getDefault())
 
 
                         if (!weights.isEmpty()) {

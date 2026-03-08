@@ -20,10 +20,6 @@ class WeightItemRepository @Inject constructor(
         return weightItemRemoteDataSource.addWeight(weight)
     }
 
-    suspend fun updateWeight(weight: Weight) {
-        weightItemRemoteDataSource.updateWeight(weight)
-    }
-
     suspend fun deleteWeight(weightId: String) {
         weightItemRemoteDataSource.deleteWeight(weightId)
     }

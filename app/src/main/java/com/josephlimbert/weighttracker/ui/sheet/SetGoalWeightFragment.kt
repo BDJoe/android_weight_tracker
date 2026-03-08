@@ -1,0 +1,75 @@
+package com.josephlimbert.weighttracker.ui.sheet
+
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.josephlimbert.weighttracker.R
+import com.josephlimbert.weighttracker.ui.WeightViewModel
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+
+@AndroidEntryPoint
+class SetGoalWeightFragment : BottomSheetDialogFragment() {
+    var weightText: EditText? = null
+    private val weightViewModel: WeightViewModel by viewModels()
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        // Inflate the layout for this fragment
+        val rootView = inflater.inflate(R.layout.sheet_set_goal_weight, container, false)
+        // Initialize variables
+        weightText = rootView.findViewById(R.id.goal_weight_input_edit_text)
+        val goalWeightLabel = rootView.findViewById<TextView>(R.id.set_goal_label)
+        val submitButton = rootView.findViewById<Button>(R.id.set_goal_weight_submit_button)
+
+        // Check for boolean argument indicating whether this view was created for editing
+        // an existing goal weight or setting a new one.
+        if (arguments != null) {
+            if (requireArguments().getBoolean("isEditing")) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        weightViewModel.goalWeight.collect { weight ->
+                            if (weight != null) {
+                                weightText!!.setText(weight.toString())
+                                goalWeightLabel.text = getString(R.string.change_goal_weight)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        submitButton.setOnClickListener { _: View? -> this.submitWeight() }
+        return rootView
+    }
+
+    // This function will submit the goal weight to the database
+    fun submitWeight() {
+        // Check that the goal weight is not empty
+        if (weightText!!.text.toString().isEmpty()) {
+            weightText!!.error = getString(R.string.empty_weight_error)
+        } else {
+            try {
+                val newWeight = weightText!!.text.toString().toDouble()
+                // If we are editing a goal weight then we update the weight and send the update to the database
+                // Otherwise, we create a new goal weight and add it to the database
+                weightViewModel.setGoalWeight(newWeight)
+                dismiss()
+            } catch (_: NumberFormatException) {
+                weightText!!.error = getString(R.string.weight_number_error)
+            }
+        }
+    }
+}

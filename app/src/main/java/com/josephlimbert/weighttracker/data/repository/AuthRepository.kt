@@ -28,6 +28,10 @@ class AuthRepository @Inject constructor(
         return authRemoteDataSource.getUserProfile(userId)
     }
 
+    suspend fun setGoalWeight(weight: Double) {
+        authRemoteDataSource.setGoalWeight(weight)
+    }
+
     fun signOut() {
         authRemoteDataSource.signOut()
     }

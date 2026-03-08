@@ -17,11 +17,13 @@ class WeightItemRemoteDataSource @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     fun getWeightList(currentUserIdFlow: Flow<String?>): Flow<List<Weight>> {
         return currentUserIdFlow.flatMapLatest { userId ->
-            firestore
-                .collection(WEIGHT_ITEMS_COLLECTION)
-                .whereEqualTo(USER_ID_FIELD, userId)
-                .orderBy("recordedDate", Query.Direction.DESCENDING)
-                .dataObjects()
+            userId.let {
+                firestore
+                    .collection(WEIGHT_ITEMS_COLLECTION)
+                    .whereEqualTo(USER_ID_FIELD, userId)
+                    .orderBy("recordedDate", Query.Direction.DESCENDING)
+                    .dataObjects()
+            }
         }
     }
     suspend fun  getWeight(weightId: String): Weight? {
@@ -39,14 +41,6 @@ class WeightItemRemoteDataSource @Inject constructor(
             .add(weight)
             .await()
             .id
-    }
-
-    suspend fun updateWeight(weight: Weight) {
-        firestore
-            .collection(WEIGHT_ITEMS_COLLECTION)
-            .document(weight.id)
-            .set(weight)
-            .await()
     }
 
     suspend fun deleteWeight(weightId: String) {

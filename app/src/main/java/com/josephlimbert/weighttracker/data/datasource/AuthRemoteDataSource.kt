@@ -58,6 +58,16 @@ class AuthRemoteDataSource @Inject constructor(
                 .toObject()
     }
 
+    suspend fun setGoalWeight(weight: Double) {
+        currentUser?.uid?.let {
+            firestore
+                .collection(USER_COLLECTION)
+                .document(it)
+                .update("goalWeight", weight)
+                .await()
+        }
+    }
+
     fun signOut(){
         if (auth.currentUser!!.isAnonymous) {
             auth.currentUser!!.delete()

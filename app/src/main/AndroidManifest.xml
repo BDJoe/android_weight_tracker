@@ -18,11 +18,11 @@
         android:theme="@style/Theme.WeightTracker"
         android:name = ".data.injection.WeightTrackerHiltApp">
         <activity
-            android:name=".view.LoginActivity"
+            android:name=".LoginActivity"
             android:exported="false"
-            android:parentActivityName=".view.MainActivity"/>
+            android:parentActivityName=".MainActivity"/>
         <activity
-            android:name=".view.MainActivity"
+            android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

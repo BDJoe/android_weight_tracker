@@ -1,4 +1,4 @@
-package com.josephlimbert.weighttracker.view
+package com.josephlimbert.weighttracker.ui.home
 
 import android.content.Context
 import android.content.Intent
@@ -20,16 +20,15 @@ import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.loadingindicator.LoadingIndicator
-import com.google.firebase.auth.FirebaseUser
 import com.josephlimbert.weighttracker.R
-import com.josephlimbert.weighttracker.data.model.Weight
 import com.josephlimbert.weighttracker.ui.WeightViewModel
+import com.josephlimbert.weighttracker.ui.sheet.AddWeightSheetFragment
+import com.josephlimbert.weighttracker.LoginActivity
+import com.josephlimbert.weighttracker.ui.sheet.SetGoalWeightFragment
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import me.tankery.lib.circularseekbar.CircularSeekBar
