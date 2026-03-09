@@ -14,6 +14,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
@@ -22,12 +23,13 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.findNavController
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.loadingindicator.LoadingIndicator
 import com.josephlimbert.weighttracker.R
-import com.josephlimbert.weighttracker.ui.WeightViewModel
 import com.josephlimbert.weighttracker.ui.sheet.AddWeightSheetFragment
-import com.josephlimbert.weighttracker.LoginActivity
+import com.josephlimbert.weighttracker.data.repository.AuthResult
+import com.josephlimbert.weighttracker.data.repository.FirestoreResult
 import com.josephlimbert.weighttracker.ui.sheet.SetGoalWeightFragment
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -36,7 +38,7 @@ import java.util.Locale
 
 @AndroidEntryPoint
 class HomeFragment : Fragment(), MenuProvider {
-    private val weightViewModel: WeightViewModel by viewModels()
+    private val viewModel: HomeViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -61,20 +63,39 @@ class HomeFragment : Fragment(), MenuProvider {
 
         val signInReminder = rootView.findViewById<ConstraintLayout>(R.id.sign_in_reminder)
         val signInButton = rootView.findViewById<Button>(R.id.sign_in_button)
-//        val userViewModel =
-//            ViewModelProvider(requireActivity()).get<UserViewModel>(UserViewModel::class.java)
-//        val weightViewModel = ViewModelProvider(requireActivity()).get<WeightViewModel>(
-//            WeightViewModel::class.java
-//        )
         val weightUnits = getString(R.string.unit_pounds)
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    weightViewModel.currentUser.collect { user ->
+                    viewModel.auth.collect { user ->
                         if (user == null) {
                             loadingLayout.visibility = View.VISIBLE
                             homeLayout.visibility = View.GONE
+                            when (val user = viewModel.createGuestAccount()) {
+                                is AuthResult.Success -> {
+                                    when (val result = viewModel.createUserProfile(user.data)) {
+                                        is FirestoreResult.Success -> {
+                                            Log.d("MAINAX", user.data.uid + "Success")
+                                        }
+                                        is FirestoreResult.Error -> {
+                                            Log.d("MAINAX", result.message)
+                                            Toast.makeText(
+                                                context,
+                                                result.message,
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                        }
+                                    }
+                                }
+                                is AuthResult.Error -> {
+                                    Toast.makeText(
+                                        context,
+                                        user.message + "MainActivity",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
                         } else {
                             loadingLayout.visibility = View.GONE
                             homeLayout.visibility = View.VISIBLE
@@ -82,147 +103,80 @@ class HomeFragment : Fragment(), MenuProvider {
                                 signInReminder.visibility = View.VISIBLE
                             else
                                 signInReminder.visibility = View.GONE
-                        }
-                    }
-                }
-                launch {
-                    weightViewModel.startingWeight.collect { weight ->
-                        val weightText = if (weight != null) weight.weight
-                            .toString() + weightUnits else "N/A"
-                        startingWeightText.text = weightText
-                        val startDateString = if (weight != null) DateFormat.getDateInstance(
-                            DateFormat.MEDIUM,
-                            Locale.getDefault()
-                        ).format(weight.recordedDate.toDate()) else "N/A"
-                        startDateText.text = startDateString
-                    }
-                }
-                launch {
-                    weightViewModel.goalWeight.collect { weight ->
-                        if (weight != null) {
-                            if (weight > 0) {
-                                val weightText = weight.toString() + weightUnits
-                                goalWeightText.text = weightText
-                                setGoalButton.visibility = View.GONE
-                            } else {
-                                goalWeightText.text = "N/A"
-                                setGoalButton.visibility = View.VISIBLE
+                            launch {
+                                viewModel.userProfile.collect { profile ->
+                                    Log.d("Home", user.uid  + " "  + profile)
+                                    profile?.goalWeight?.let {
+                                        if (it > 0) {
+                                            val goalText = it.toString() + weightUnits
+                                            goalWeightText.text = goalText
+                                            setGoalButton.visibility = View.GONE
+                                        } else {
+                                            goalWeightText.text = "N/A"
+                                            setGoalButton.visibility = View.VISIBLE
+                                        }
+                                    }
+                                }
+                            }
+
+                            launch {
+                                viewModel.startingWeight.collect { weight ->
+                                    val startText = if (weight != null) weight.weight
+                                        .toString() + weightUnits else "N/A"
+                                    startingWeightText.text = startText
+
+                                    val startDateString = if (weight != null) DateFormat.getDateInstance(
+                                        DateFormat.MEDIUM,
+                                        Locale.getDefault()
+                                    ).format(weight.recordedDate.toDate()) else "N/A"
+                                    startDateText.text = startDateString
+                                }
+                            }
+
+                            launch {
+                                viewModel.currentWeight.collect { weight ->
+                                    val currentText = if (weight != null) weight.weight
+                                        .toString() + weightUnits else "N/A"
+                                    currentWeightText.text = currentText
+                                }
+                            }
+
+                            launch {
+                                viewModel.totalLossPercent.collect { total ->
+                                    val percentText = total.toInt().toString() + "%"
+                                    percentageText.text = percentText
+                                    progressBar.progress = total.toFloat()
+                                }
+                            }
+
+                            launch {
+                                viewModel.totalLossWeight.collect { weight ->
+                                    val totalText = weight.toString() + weightUnits
+                                    totalLossText.text = totalText
+                                }
+                            }
+
+                            launch {
+                                viewModel.targetLoss.collect { weight ->
+                                    val targetLoss = weight.toString() + weightUnits
+                                    targetLossText.text = targetLoss
+                                }
+                            }
+
+                            launch {
+                                viewModel.targetLeft.collect { weight ->
+                                    val targetLeft = weight.toString() + weightUnits
+                                    targetLeftText.text = targetLeft
+                                }
                             }
                         }
-                    }
-                }
-                launch {
-                    weightViewModel.currentWeight.collect { weight ->
-                        val weightText = if (weight != null) weight.weight
-                            .toString() + weightUnits else "N/A"
-                        currentWeightText.text = weightText
-                    }
-                }
-                launch {
-                    weightViewModel.totalLossPercent.collect { total ->
-                        val percentText = total.toInt().toString() + "%"
-                        percentageText.text = percentText
-                        progressBar.progress = total.toFloat()
-                    }
-                }
-                launch {
-                    weightViewModel.totalLossWeight.collect { weight ->
-                        val weightText = weight.toString() + weightUnits
-                        totalLossText.text = weightText
-                    }
-                }
-                launch {
-                    weightViewModel.targetLoss.collect { weight ->
-                        val weightText = weight.toString() + weightUnits
-                        targetLossText.text = weightText
-                    }
-                }
-                launch {
-                    weightViewModel.targetLeft.collect { weight ->
-                        val weightText = weight.toString() + weightUnits
-                        targetLeftText.text = weightText
                     }
                 }
             }
         }
 
-//        userViewModel.getAuthUser()
-//            .observe(getViewLifecycleOwner(), Observer { firebaseUser: FirebaseUser? ->
-//                if (firebaseUser == null) return@observe
-//                if (firebaseUser.isAnonymous()) {
-//                    signInReminder.setVisibility(View.VISIBLE)
-//                } else {
-//                    signInReminder.setVisibility(View.GONE)
-//                }
-//
-//                weightViewModel.getGoalWeight()
-//                    .observe(getViewLifecycleOwner(), Observer { goalWeight: Float? ->
-//                        if (goalWeight!! > 0) {
-//                            val weightText = goalWeight.toString() + weightUnits
-//                            goalWeightText.setText(weightText)
-//                            setGoalButton.setVisibility(View.GONE)
-//                        } else {
-//                            goalWeightText.setText("N/A")
-//                            setGoalButton.setVisibility(View.VISIBLE)
-//                        }
-//                    })
-//
-//                // Get the current weight and set the text on the view. Set to N/A if no weight data.
-//                weightViewModel.getCurrentWeight()
-//                    .observe(getViewLifecycleOwner(), Observer { weight: Weight? ->
-//                        val weightText = if (weight != null) weight.getWeight()
-//                            .toString() + weightUnits else "N/A"
-//                        currentWeightText.setText(weightText)
-//                    })
-//                // Get the starting weight and set the text on the view. Set to N/A if no weight data.
-//                weightViewModel.getStartingWeight()
-//                    .observe(getViewLifecycleOwner(), Observer { weight: Weight? ->
-//                        val weightText = if (weight != null) weight.getWeight()
-//                            .toString() + weightUnits else "N/A"
-//                        startingWeightText.setText(weightText)
-//                        val startDateString = if (weight != null) DateFormat.getDateInstance(
-//                            DateFormat.MEDIUM,
-//                            Locale.getDefault()
-//                        ).format(weight.getRecordedDate().toDate()) else "N/A"
-//                        startDateText.setText(startDateString)
-//                    })
-//                // Get the percentage of weight loss and set the text on the view.
-//                weightViewModel.getTotalLossPercent()
-//                    .observe(getViewLifecycleOwner(), Observer { total: Float? ->
-//                        val percentText = if (total != null) total.toInt() + "%" else "N/A"
-//                        percentageText.setText(percentText)
-//                        progressBar.progress = if (total != null) total else 0f
-//                    })
-//                // get the weight loss in pounds and set the text on the view
-//                weightViewModel.getTotalLossWeight()
-//                    .observe(getViewLifecycleOwner(), Observer { total: Float? ->
-//                        val weightText =
-//                            if (total != null) total.toString() + weightUnits else "N/A"
-//                        totalLossText.setText(weightText)
-//                    })
-//                // get the weight loss in pounds and set the text on the view. Set to N/A if no data returned
-//                weightViewModel.getTargetLoss()
-//                    .observe(getViewLifecycleOwner(), Observer { weight: Float? ->
-//                        val weightText =
-//                            if (weight != null) weight.toString() + weightUnits else "N/A"
-//                        targetLossText.setText(weightText)
-//                    })
-//                // get the weight left to lose and set the text on the view
-//                weightViewModel.getTargetLeft()
-//                    .observe(getViewLifecycleOwner(), Observer { weight: Float? ->
-//                        val weightText =
-//                            if (weight != null) weight.toString() + weightUnits else "N/A"
-//                        targetLeftText.setText(weightText)
-//                    })
-//                weightViewModel.checkGoalReached()
-//                    .observe(getViewLifecycleOwner(), Observer { isReached: Boolean? ->
-//                        if (isReached) sendSms()
-//                    })
-//            })
-
         signInButton.setOnClickListener(View.OnClickListener { v: View? ->
-            val intent = Intent(requireActivity(), LoginActivity::class.java)
-            startActivity(intent)
+            findNavController().navigate(R.id.navigation_sign_in)
         })
 
         setGoalButton.setOnClickListener(View.OnClickListener { v: View? ->

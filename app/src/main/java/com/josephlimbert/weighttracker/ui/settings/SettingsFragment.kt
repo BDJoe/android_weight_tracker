@@ -1,7 +1,6 @@
 package com.josephlimbert.weighttracker.ui.settings
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -19,20 +18,17 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.findNavController
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.josephlimbert.weighttracker.R
-import com.josephlimbert.weighttracker.data.model.User
-import com.josephlimbert.weighttracker.ui.UserViewModel
 import com.josephlimbert.weighttracker.ui.sheet.SetGoalWeightFragment
-import com.josephlimbert.weighttracker.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class SettingsFragment : Fragment() {
     var numberInput: ConstraintLayout? = null
-    private val userViewModel: UserViewModel by viewModels()
-    var userProfile: User? = null
+    private val settingsViewModel: SettingsViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -51,15 +47,14 @@ class SettingsFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                userViewModel.userProfile.collect { user ->
+                settingsViewModel.user.collect { user ->
                     if (user != null) {
-                        userProfile = user
                         if (user.isAnonymous) {
                             logoutButton.visibility = View.VISIBLE
                         } else {
                             logoutButton.visibility = View.VISIBLE
                         }
-                        val phone = user.phone ?: ""
+                        val phone =  ""
                         if (!phone.isEmpty()) {
                             submitPhoneButton.visibility = View.GONE
                             phoneText.text = phone
@@ -73,9 +68,8 @@ class SettingsFragment : Fragment() {
 
         logoutButton.setOnClickListener { _: View? ->
             logoutButton.isEnabled = false
-            userViewModel.signOut()
-            val intent = Intent(rootView.context, MainActivity::class.java)
-            startActivity(intent)
+            settingsViewModel.signOut()
+            findNavController().navigate(R.id.navigation_home)
         }
 
         editGoalWeightButton.setOnClickListener { _: View? ->

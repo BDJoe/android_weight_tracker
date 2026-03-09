@@ -14,6 +14,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.TextView
+import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -30,7 +31,7 @@ import com.jjoe64.graphview.series.DataPoint
 import com.jjoe64.graphview.series.LineGraphSeries
 import com.josephlimbert.weighttracker.R
 import com.josephlimbert.weighttracker.data.model.Weight
-import com.josephlimbert.weighttracker.ui.WeightViewModel
+import com.josephlimbert.weighttracker.data.repository.FirestoreResult
 import com.josephlimbert.weighttracker.ui.sheet.AddWeightSheetFragment
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -39,7 +40,7 @@ import kotlin.math.min
 
 @AndroidEntryPoint
 class HistoryFragment : Fragment() {
-    private val weightViewModel: WeightViewModel by viewModels()
+    private val viewModel: HistoryViewModel by viewModels()
     private val adapter: WeightListAdapter = WeightListAdapter()
     var graph: GraphView? = null
 
@@ -58,74 +59,58 @@ class HistoryFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    weightViewModel.weightList.collect { weights ->
-                        adapter.setWeightList(weights)
+                    viewModel.uiState.collect { state ->
+                        adapter.setWeightList(state.weightList)
                         val dayOfMonthFormat = SimpleDateFormat(DateFormat.DAY, Locale.getDefault())
                         val monthFormat =
                             SimpleDateFormat(DateFormat.NUM_MONTH, Locale.getDefault())
 
 
-                        if (!weights.isEmpty()) {
+                        if (!state.weightList.isEmpty()) {
                             val series = LineGraphSeries<DataPoint?>()
-                            for (i in weights.size downTo 1) {
+                            for (i in state.weightList.size downTo 1) {
                                 val point = DataPoint(
-                                    (weights.size - i).toDouble(),
-                                    weights[i - 1].weight
+                                    (state.weightList.size - i).toDouble(),
+                                    state.weightList[i - 1].weight
                                 )
-                                series.appendData(point, true, weights.size)
+                                series.appendData(point, true, state.weightList.size)
                             }
                             graph!!.addSeries(series)
-//                weightViewModel.getGoalWeight()
-//                    .observe(getViewLifecycleOwner(), Observer { goalWeight: Float? ->
-//                        val goalSeries = LineGraphSeries<DataPoint?>(
-//                            arrayOf<DataPoint>(
-//                                DataPoint(0.0, goalWeight!!.toDouble()),
-//                                DataPoint(weightList.size.toDouble(), goalWeight.toDouble())
-//                            )
-//                        )
-//                        goalSeries.setColor(requireContext().getColor(R.color.md_theme_success))
-//                        goalSeries.setTitle("Goal Weight")
-//                        goalSeries.setThickness(8)
-//                        graph!!.addSeries(goalSeries)
-//                        graph!!.getViewport().setMinY((goalWeight - 20).toDouble())
-//                    })
+
+                            if (state.goalWeight != null) {
+                                val goalSeries = LineGraphSeries<DataPoint?>(
+                                    arrayOf<DataPoint>(
+                                        DataPoint(0.0, state.goalWeight),
+                                        DataPoint(state.weightList.size.toDouble(), state.goalWeight)
+                                    )
+                                )
+                                goalSeries.color = requireContext().getColor(R.color.md_theme_success)
+                                goalSeries.title = "Goal Weight"
+                                goalSeries.thickness = 8
+                                graph!!.addSeries(goalSeries)
+                                graph!!.viewport.setMinY((state.goalWeight - 20))
+                            }
 
                             graph!!.viewport.setXAxisBoundsManual(true)
                             graph!!.viewport.setMinX(0.0)
-                            graph!!.viewport.setMaxX((weights.size - 1).toDouble())
+                            graph!!.viewport.setMaxX((state.weightList.size - 1).toDouble())
                             graph!!.gridLabelRenderer.setLabelFormatter(object : DefaultLabelFormatter() {
                                 override fun formatLabel(value: Double, isValueX: Boolean): String? {
                                     if (isValueX) {
-                                        if (value < weights.size) {
-                                            val index = (weights.size - value - 1).toInt()
+                                        if (value < state.weightList.size) {
+                                            val index = (state.weightList.size - value - 1).toInt()
                                             return monthFormat.format(
-                                                weights[index].recordedDate.toDate()
+                                                state.weightList[index].recordedDate.toDate()
                                             ) + "/" + dayOfMonthFormat.format(
-                                                weights[index].recordedDate.toDate()
+                                                state.weightList[index].recordedDate.toDate()
                                             )
                                         }
                                     }
                                     return super.formatLabel(value, isValueX)
                                 }
                             })
-                            graph!!.gridLabelRenderer.numHorizontalLabels = min(weights.size, 5)
+                            graph!!.gridLabelRenderer.numHorizontalLabels = min(state.weightList.size, 5)
                         }
-                    }
-                }
-                launch {
-                    weightViewModel.goalWeight.collect { goalWeight ->
-                        if (goalWeight == null) return@collect
-                        val goalSeries = LineGraphSeries<DataPoint?>(
-                            arrayOf<DataPoint>(
-                                DataPoint(0.0, goalWeight),
-                                DataPoint(graph!!.viewport.getMaxX(true), goalWeight)
-                            )
-                        )
-                        goalSeries.color = requireContext().getColor(R.color.md_theme_success)
-                        goalSeries.title = "Goal Weight"
-                        goalSeries.thickness = 8
-                        graph!!.addSeries(goalSeries)
-                        graph!!.viewport.setMinY((goalWeight - 20))
                     }
                 }
             }
@@ -134,7 +119,7 @@ class HistoryFragment : Fragment() {
         return rootView
     }
 
-    private inner class WeightListAdapter() :
+    private inner class WeightListAdapter :
         RecyclerView.Adapter<WeightListHolder?>() {
         private var weightList: List<Weight>
         private var currentMonth = ""
@@ -159,7 +144,7 @@ class HistoryFragment : Fragment() {
                     editItem(weight)
                     return@OnMenuItemClickListener true
                 } else if (item.itemId == R.id.delete_weight_button) {
-                    deleteItem(weight)
+                    deleteItem(weight.id, position)
                     return@OnMenuItemClickListener true
                 }
                 false
@@ -193,7 +178,7 @@ class HistoryFragment : Fragment() {
             sheet.show(getChildFragmentManager(), "edit weight")
         }
 
-        fun deleteItem(weight: Weight) {
+        fun deleteItem(weightId: String, position: Int) {
             MaterialAlertDialogBuilder(
                 requireContext(),
                 R.style.ThemeOverlay_App_MaterialDeleteDialog
@@ -206,7 +191,16 @@ class HistoryFragment : Fragment() {
                 .setPositiveButton(
                     "Delete"
                 ) { _: DialogInterface?, _: Int ->
-                    weightViewModel.deleteWeight(weight.id)
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        when (val result = viewModel.deleteWeight(weightId)) {
+                            is FirestoreResult.Success -> {
+                                notifyItemRemoved(position)
+                            }
+                            is FirestoreResult.Error -> {
+                                Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
                 }
                 .show()
         }
@@ -244,7 +238,7 @@ class HistoryFragment : Fragment() {
             currentMonth: String?,
             showDivider: Boolean
         ) {
-            val weightUnits = itemView.getContext().getString(R.string.unit_pounds)
+            val weightUnits = itemView.context.getString(R.string.unit_pounds)
             // Initialize variables to format the date into the day of week and day
             val dayOfMonthFormat = SimpleDateFormat(DateFormat.DAY, Locale.getDefault())
             val dayOfWeekFormat = SimpleDateFormat(DateFormat.ABBR_WEEKDAY, Locale.getDefault())
