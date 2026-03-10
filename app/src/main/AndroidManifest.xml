@@ -19,16 +19,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.WeightTracker" >
         <activity
-            android:name=".ui.history.HistoryScreen"
-            android:exported="false"
-            android:label="@string/title_activity_history_screen"
-            android:theme="@style/Theme.WeightTracker" />
-        <activity
-            android:name=".MainActivityCompose"
-            android:exported="false"
-            android:label="@string/title_activity_main_compose"
-            android:theme="@style/Theme.WeightTracker" />
-        <activity
             android:name=".MainActivity"
             android:exported="true" >
             <intent-filter>
