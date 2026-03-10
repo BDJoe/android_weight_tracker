@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.android.hilt)
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
@@ -21,6 +22,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    buildFeatures {
+        compose = true
+    }
+
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
@@ -37,9 +42,33 @@ android {
 }
 
 dependencies {
+    implementation(libs.lifecycle.runtime.ktx)
+    implementation(libs.activity.compose)
+    implementation(libs.ui)
+    implementation(libs.ui.graphics)
+    implementation(libs.material3.adaptive.navigation.suite)
+    // Add compose support
+    val composeBom = platform("androidx.compose:compose-bom:2026.02.01")
+    implementation(composeBom)
+    androidTestImplementation(composeBom)
+    // Material Design 3
+    implementation("androidx.compose.material3:material3")
+
+    // Android Studio Preview support
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+
+    // UI Tests
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // Optional - Add window size utils
+    implementation("androidx.compose.material3.adaptive:adaptive")
+
     implementation(libs.android.hilt)
     ksp(libs.android.hilt.compiler)
     implementation(libs.graph.view)
+    implementation(libs.vico.compose.m3)
     implementation(libs.circularseekbar)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.auth)
