@@ -65,6 +65,9 @@ dependencies {
     // Optional - Add window size utils
     implementation("androidx.compose.material3.adaptive:adaptive")
 
+    // Navigation Compose
+    implementation("androidx.navigation:navigation-compose:2.9.7")
+
     implementation(libs.android.hilt)
     ksp(libs.android.hilt.compiler)
     implementation(libs.graph.view)

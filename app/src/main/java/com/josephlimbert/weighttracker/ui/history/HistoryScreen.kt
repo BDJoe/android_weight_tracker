@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,6 +22,8 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.josephlimbert.weighttracker.R
+import com.josephlimbert.weighttracker.ui.shared.CenterTopAppBar
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
@@ -43,17 +47,22 @@ import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProdu
 import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import kotlinx.serialization.Serializable
 import kotlin.math.exp
 
-@Composable
-fun HistoryScreen() {
-    HistoryScreenContent()
-}
+@Serializable
+object HistoryRoute
 
 @Composable
-fun HistoryScreenContent() {
+fun HistoryScreen(modifier: Modifier) {
+    HistoryScreenContent(modifier = modifier)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HistoryScreenContent(modifier: Modifier) {
     Scaffold() { innerPadding ->
-        Column(modifier = Modifier
+        Column(modifier = modifier
             .fillMaxSize()
             .padding(
                 top = innerPadding.calculateTopPadding(),
@@ -147,7 +156,7 @@ fun HistoryChart(modifier: Modifier = Modifier) {
 }
 
 @Composable
-@Preview(showSystemUi = true)
+@Preview(showSystemUi = false)
 fun HistoryScreenPreview() {
-    HistoryScreen()
+    HistoryScreen(modifier = Modifier)
 }

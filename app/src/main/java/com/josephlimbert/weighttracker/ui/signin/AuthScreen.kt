@@ -21,20 +21,24 @@ import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseUser
 import com.josephlimbert.weighttracker.R
 import com.josephlimbert.weighttracker.data.repository.AuthResult
+import kotlinx.serialization.Serializable
+
+@Serializable
+object AuthRoute
 
 @Composable
-fun AuthScreen(viewModel: SignInViewModel) {
-    AuthScreenContent()
+fun AuthScreen(modifier: Modifier) {
+    AuthScreenContent(modifier = modifier)
 }
 
 @Composable
-fun AuthScreenContent() {
+fun AuthScreenContent(modifier: Modifier) {
     val emailState: TextFieldState = TextFieldState()
     val passwordState: TextFieldState = TextFieldState()
 
     Scaffold() { innerPadding ->
         Column(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .padding(
                     top = innerPadding.calculateTopPadding(),
@@ -70,7 +74,6 @@ fun AuthScreenContent() {
 @Preview(showSystemUi = true)
 fun AuthScreenContentPreview() {
     MaterialTheme() {
-        AuthScreenContent(
-        )
+        AuthScreenContent(modifier = Modifier)
     }
 }
