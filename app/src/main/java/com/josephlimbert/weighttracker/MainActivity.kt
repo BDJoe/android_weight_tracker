@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
                         CenterTopAppBar(navController = navController, currentDestination = currentDestination)
                     },
                     bottomBar = {
-                        NavigationBar(windowInsets = NavigationBarDefaults.windowInsets) {
+                        NavigationBar() {
                             Destination.entries.forEachIndexed { index, destination ->
                                 if (destination == Destination.AUTH) return@forEachIndexed
                                 NavigationBarItem(

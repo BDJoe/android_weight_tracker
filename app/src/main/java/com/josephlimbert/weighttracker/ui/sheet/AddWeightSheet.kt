@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -45,23 +46,27 @@ import com.josephlimbert.weighttracker.R
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddWeightSheet() {
-    AddWeightSheetContent()
+fun AddWeightSheet(onDismiss: () -> Unit, onSubmit: (weight: String?, date: Long?) -> Unit) {
+    AddWeightSheetContent(onDismiss = onDismiss, onSubmit = onSubmit)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddWeightSheetContent() {
+fun AddWeightSheetContent(onDismiss: () -> Unit, onSubmit: (weight: String?, date: Long?) -> Unit) {
     val weightState = rememberTextFieldState("")
     var selectedDate by remember { mutableStateOf<Long?>(null) }
     var showModal by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
 
-    ModalBottomSheet(onDismissRequest = {}) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = stringResource(R.string.add_new_weight), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.W500)
             OutlinedTextField(
-                modifier = Modifier.fillMaxWidth().padding(top = 15.dp, start = 15.dp, end = 15.dp, bottom = 10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 15.dp, start = 15.dp, end = 15.dp, bottom = 10.dp),
                 state = weightState,
                 label = { Text("Weight") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
@@ -95,7 +100,7 @@ fun AddWeightSheetContent() {
             if (showModal) {
                 DatePickerModal(onDateSelected = { selectedDate = it }, onDismiss = { showModal = false })
             }
-            Button(onClick = { }, modifier = Modifier.padding(top = 50.dp)) {
+            Button(onClick = { onSubmit(weightState.text.toString(), selectedDate) }, modifier = Modifier.padding(top = 50.dp)) {
                 Text("Submit")
             }
         }
@@ -134,8 +139,9 @@ fun convertMillisToDate(millis: Long): String {
     return formatter.format(Date(millis))
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Preview(showSystemUi = false)
 fun AddWeightSheetPreview() {
-    AddWeightSheet()
+    AddWeightSheet(onDismiss = {}, onSubmit = {weight, date -> })
 }

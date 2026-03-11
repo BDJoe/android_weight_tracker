@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -21,6 +22,10 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -30,10 +35,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
-import com.josephlimbert.weighttracker.Destination
+import androidx.compose.ui.unit.sp
 import com.josephlimbert.weighttracker.R
+import com.josephlimbert.weighttracker.ui.sheet.AddWeightSheet
+import com.josephlimbert.weighttracker.ui.sheet.SetGoalSheet
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -44,12 +49,16 @@ fun HomeScreen(modifier: Modifier, onNavigateToAuth: () -> Unit) {
     HomeScreenContent(modifier = modifier, onNavigateToAuth = onNavigateToAuth)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreenContent(modifier: Modifier, onNavigateToAuth: () -> Unit) {
     val scrollState = rememberScrollState()
+    var showAddWeightSheet by remember { mutableStateOf(false) }
+    var showSetGoalSheet by remember { mutableStateOf(false) }
+
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = {}) {
+            FloatingActionButton(onClick = { showAddWeightSheet = true }, modifier = modifier) {
                 Icon(painterResource(R.drawable.add_icon), stringResource(R.string.add_weight))
             }
         }
@@ -66,60 +75,94 @@ fun HomeScreenContent(modifier: Modifier, onNavigateToAuth: () -> Unit) {
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            CurrentWeightCard()
+            CurrentWeightCard(onClick = { showSetGoalSheet = true })
             StatsCard()
             Button(onClick = onNavigateToAuth) {
                 Text(text = "Sign In")
             }
         }
+
+        if (showAddWeightSheet) {
+            AddWeightSheet(onDismiss = { showAddWeightSheet = false }, onSubmit = { weight, date ->
+                showAddWeightSheet = false })
+        }
+
+        if (showSetGoalSheet) {
+            SetGoalSheet(onDismiss = { showSetGoalSheet = false }, onSubmit = { weight ->
+                showSetGoalSheet = false })
+        }
     }
 }
 
 @Composable
-fun CurrentWeightCard() {
+fun CurrentWeightCard(onClick: () -> Unit) {
     OutlinedCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp),
     ) {
-        Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-            Column() {
-                Text(text = stringResource(R.string.start_weight),
-                    modifier = Modifier.padding(bottom = 5.dp),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center)
-                Text("250 lbs", style = MaterialTheme.typography.titleMedium)
-            }
+        Column() {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Column() {
+                    Text(
+                        text = stringResource(R.string.start_weight),
+                        modifier = Modifier.padding(bottom = 5.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Text("250 lbs", style = MaterialTheme.typography.titleMedium)
+                }
 
-            Box() {
-                CircularProgressIndicator(
-                    modifier = Modifier
-                        .padding(vertical = 20.dp)
-                        .size(200.dp)
-                        .rotate(-90F),
-                    strokeWidth = 10.dp,
-                    gapSize = 0.dp,
-                    progress = { 0.5F }
-                )
-                Column(
-                    modifier = Modifier.matchParentSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(text = "15%", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.W500)
-                    Text(text = "Current Weight", style = MaterialTheme.typography.headlineSmall)
-                    Text(text = "230 lbs", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.W500)
+                Box() {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .padding(vertical = 20.dp)
+                            .size(200.dp)
+                            .rotate(-90F),
+                        strokeWidth = 10.dp,
+                        gapSize = 0.dp,
+                        progress = { 0.5F }
+                    )
+                    Column(
+                        modifier = Modifier.matchParentSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "15%",
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.W500
+                        )
+                        Text(
+                            text = "Current Weight",
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Text(
+                            text = "230 lbs",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.W500
+                        )
+                    }
+                }
+
+                Column() {
+                    Text(
+                        text = stringResource(R.string.goal_weight),
+                        modifier = Modifier.padding(bottom = 5.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Text("175 lbs", style = MaterialTheme.typography.titleMedium)
                 }
             }
-
-            Column() {
-                Text(text = stringResource(R.string.goal_weight),
-                    modifier = Modifier.padding(bottom = 5.dp),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center)
-                Text("175 lbs", style = MaterialTheme.typography.titleMedium)
+            Button(onClick = onClick, modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 20.dp)) {
+                Text(text = stringResource(R.string.set_goal_weight), fontSize = 24.sp, modifier = Modifier.padding(vertical = 5.dp))
             }
         }
     }

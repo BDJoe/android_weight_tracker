@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,25 +24,28 @@ import androidx.compose.ui.unit.dp
 import com.josephlimbert.weighttracker.R
 
 @Composable
-fun SetGoalSheet() {
-    SetGoalContent()
+fun SetGoalSheet(onDismiss: () -> Unit, onSubmit: (weight: String?) -> Unit) {
+    SetGoalContent(onDismiss = onDismiss, onSubmit = onSubmit)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SetGoalContent() {
+fun SetGoalContent(onDismiss: () -> Unit, onSubmit: (weight: String?) -> Unit) {
     val weightState = rememberTextFieldState()
+    val sheetState = rememberModalBottomSheetState()
 
-    ModalBottomSheet(onDismissRequest = {}) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = stringResource(R.string.set_goal_weight), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.W500)
             OutlinedTextField(
-                modifier = Modifier.fillMaxWidth().padding(top = 15.dp, start = 15.dp, end = 15.dp, bottom = 10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 15.dp, start = 15.dp, end = 15.dp, bottom = 10.dp),
                 state = weightState,
                 label = { Text("Weight") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
-            Button(onClick = { }, modifier = Modifier.padding(top = 50.dp)) {
+            Button(onClick = { onSubmit(weightState.text.toString()) }, modifier = Modifier.padding(top = 50.dp)) {
                 Text("Submit")
             }
         }
@@ -51,5 +55,5 @@ fun SetGoalContent() {
 @Composable
 @Preview(showSystemUi = false)
 fun SetGoalSheetPreview() {
-    SetGoalSheet()
+    SetGoalSheet(onDismiss = {}, onSubmit = {weight -> })
 }

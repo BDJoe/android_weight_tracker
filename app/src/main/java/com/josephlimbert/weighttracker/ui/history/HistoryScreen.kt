@@ -40,6 +40,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.josephlimbert.weighttracker.R
 import com.josephlimbert.weighttracker.ui.shared.CenterTopAppBar
+import com.josephlimbert.weighttracker.ui.sheet.AddWeightSheet
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
@@ -61,6 +62,7 @@ fun HistoryScreen(modifier: Modifier) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreenContent(modifier: Modifier) {
+    var showBottomSheet by remember { mutableStateOf(false) }
     Scaffold() { innerPadding ->
         Column(modifier = modifier
             .fillMaxSize()
@@ -73,15 +75,19 @@ fun HistoryScreenContent(modifier: Modifier) {
             HistoryChart()
             LazyColumn() {
                 items(3) {
-                    ListItem()
+                    ListItem(onEdit = { showBottomSheet = true})
                 }
             }
+        }
+        if (showBottomSheet) {
+            AddWeightSheet(onDismiss = { showBottomSheet = false }, onSubmit = { weight, date ->
+                showBottomSheet = false })
         }
     }
 }
 
 @Composable
-fun ListItem() {
+fun ListItem(onEdit: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = "Feb 26", style = MaterialTheme.typography.titleLarge, modifier = Modifier
@@ -109,7 +115,7 @@ fun ListItem() {
                     color = colorResource(R.color.md_theme_success),
                     modifier = Modifier.padding(start = 5.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    DropdownMenu(modifier = Modifier.padding(end = 10.dp))
+                    DropdownMenu(modifier = Modifier.padding(end = 10.dp), onEdit = onEdit)
                 }
 
             }
@@ -118,7 +124,7 @@ fun ListItem() {
 }
 
 @Composable
-fun DropdownMenu(modifier: Modifier) {
+fun DropdownMenu(modifier: Modifier, onEdit: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
@@ -127,9 +133,12 @@ fun DropdownMenu(modifier: Modifier) {
         }
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = {}
+            onDismissRequest = { expanded = false}
         ) {
-            DropdownMenuItem(text = { Text(stringResource(R.string.edit_weight_label)) }, onClick = {})
+            DropdownMenuItem(text = { Text(stringResource(R.string.edit_weight_label)) }, onClick = {
+                onEdit()
+                expanded = false
+            })
             DropdownMenuItem(text = { Text(stringResource(R.string.delete_entry)) }, onClick = {})
         }
     }

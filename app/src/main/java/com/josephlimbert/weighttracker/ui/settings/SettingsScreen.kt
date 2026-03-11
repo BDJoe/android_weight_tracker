@@ -16,6 +16,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -23,6 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.josephlimbert.weighttracker.R
 import com.josephlimbert.weighttracker.ui.shared.CenterTopAppBar
+import com.josephlimbert.weighttracker.ui.sheet.SetGoalSheet
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -37,6 +42,7 @@ fun SettingsScreen(modifier: Modifier) {
 @Composable
 fun SettingsScreenContent(modifier: Modifier) {
     val scrollState = rememberScrollState()
+    var showSetGoalSheet by remember { mutableStateOf(false) }
 
     Scaffold() { innerPadding ->
         Column(modifier = modifier.fillMaxSize()
@@ -50,12 +56,17 @@ fun SettingsScreenContent(modifier: Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
             ) {
-            Button(onClick = {}, modifier = Modifier.padding(bottom = 30.dp)) {
+            Button(onClick = { showSetGoalSheet = true }, modifier = Modifier.padding(bottom = 30.dp)) {
                 Text(text = stringResource(R.string.change_goal_weight))
             }
             Button(onClick = {}, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
                 Text(text = stringResource(R.string.sign_out))
             }
+        }
+
+        if (showSetGoalSheet) {
+            SetGoalSheet(onDismiss = { showSetGoalSheet = false }, onSubmit = { weight ->
+                showSetGoalSheet = false })
         }
     }
 }
