@@ -1,38 +1,55 @@
 package com.josephlimbert.weighttracker.ui.sheet
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseUser
+import com.josephlimbert.weighttracker.MainViewModel
 import com.josephlimbert.weighttracker.data.model.User
 import com.josephlimbert.weighttracker.data.model.Weight
 import com.josephlimbert.weighttracker.data.repository.AuthRepository
 import com.josephlimbert.weighttracker.data.repository.FirestoreRepository
-import com.josephlimbert.weighttracker.data.repository.FirestoreResult
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import javax.inject.Inject
 
 @HiltViewModel
-class AddWeightViewModel @Inject constructor(private val firestoreRepository: FirestoreRepository, private val authRepository: AuthRepository): ViewModel() {
-    val user = authRepository.authStateFlow
+class AddWeightViewModel @Inject constructor(private val firestoreRepository: FirestoreRepository, authRepository: AuthRepository): MainViewModel() {
 
-    suspend fun addWeight(userId: String, weight: Weight): FirestoreResult<Unit> {
-        val id = hashId(weight.recordedDate.toString() + userId);
-        if (weight.id.isBlank()) {
-            return firestoreRepository.addWeight(weight.copy(userId = userId, id = id))
+    val userId = authRepository.currentUserIdFlow
+    private val _weight = MutableStateFlow<Weight?>(null)
+    val weight: StateFlow<Weight?>
+        get() = _weight.asStateFlow()
+
+    suspend fun getWeight(weightId: String?): Weight {
+        if (weightId != null) {
+           val weight = firestoreRepository.getWeight(weightId)
+            return weight ?: Weight()
         } else {
-            firestoreRepository.deleteWeight(weight.id)
-            return firestoreRepository.addWeight(weight.copy(userId = userId, id = id))
+            return Weight()
         }
     }
 
-    suspend fun getWeight(weightId: String): FirestoreResult<Weight?> {
-        return firestoreRepository.getWeight(weightId)
+    fun addWeight(userId: String, weight: Weight) {
+        launchCatching {
+            val id = hashId(weight.recordedDate.toString() + userId);
+            if (weight.id.isBlank()) {
+                firestoreRepository.addWeight(weight.copy(userId = userId, id = id))
+            } else {
+                firestoreRepository.deleteWeight(weight.id)
+                firestoreRepository.addWeight(weight.copy(userId = userId, id = id))
+            }
+        }
     }
 
     private fun hashId(input: String): String {

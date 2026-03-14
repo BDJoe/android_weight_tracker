@@ -7,14 +7,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,22 +22,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.navigation3.runtime.NavKey
 import com.josephlimbert.weighttracker.R
-import com.josephlimbert.weighttracker.ui.shared.CenterTopAppBar
 import com.josephlimbert.weighttracker.ui.sheet.SetGoalSheet
 import kotlinx.serialization.Serializable
 
 @Serializable
-object SettingsRoute
+data object Settings : NavKey
 
 @Composable
-fun SettingsScreen(modifier: Modifier) {
-    SettingsScreenContent(modifier = modifier)
+fun SettingsScreen(modifier: Modifier, onNavigateToSetGoal: () -> Unit, onSignOUt: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
+    SettingsScreenContent(
+        modifier = modifier,
+        onNavigateToSetGoal = onNavigateToSetGoal,
+        onSignOUt = {
+            viewModel.signOut()
+            onSignOUt()
+        })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreenContent(modifier: Modifier) {
+fun SettingsScreenContent(modifier: Modifier, onNavigateToSetGoal: () -> Unit, onSignOUt: () -> Unit) {
     val scrollState = rememberScrollState()
     var showSetGoalSheet by remember { mutableStateOf(false) }
 
@@ -56,18 +60,18 @@ fun SettingsScreenContent(modifier: Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
             ) {
-            Button(onClick = { showSetGoalSheet = true }, modifier = Modifier.padding(bottom = 30.dp)) {
+            Button(onClick = onNavigateToSetGoal, modifier = Modifier.padding(bottom = 30.dp)) {
                 Text(text = stringResource(R.string.change_goal_weight))
             }
-            Button(onClick = {}, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
+            Button(onClick = onSignOUt, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
                 Text(text = stringResource(R.string.sign_out))
             }
         }
 
-        if (showSetGoalSheet) {
-            SetGoalSheet(onDismiss = { showSetGoalSheet = false }, onSubmit = { weight ->
-                showSetGoalSheet = false })
-        }
+//        if (showSetGoalSheet) {
+//            SetGoalSheet(onDismiss = { showSetGoalSheet = false }, onSubmit = { weight ->
+//                showSetGoalSheet = false })
+//        }
     }
 }
 
@@ -75,6 +79,6 @@ fun SettingsScreenContent(modifier: Modifier) {
 @Preview(showSystemUi = false)
 fun SettingsScreenPreview() {
     MaterialTheme() {
-        SettingsScreenContent(modifier = Modifier)
+        SettingsScreenContent(modifier = Modifier, onNavigateToSetGoal = {}, onSignOUt = {})
     }
 }

@@ -2,11 +2,10 @@ package com.josephlimbert.weighttracker.ui.settings
 
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseUser
+import com.josephlimbert.weighttracker.MainViewModel
 import com.josephlimbert.weighttracker.data.repository.AuthRepository
-import com.josephlimbert.weighttracker.data.repository.AuthResult
 import com.josephlimbert.weighttracker.data.model.User
 import com.josephlimbert.weighttracker.data.repository.FirestoreRepository
-import com.josephlimbert.weighttracker.data.repository.FirestoreResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
@@ -21,8 +20,8 @@ data class AuthUiState(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val authRepository: AuthRepository, private val firestoreRepository: FirestoreRepository
-) : ViewModel() {
-    val user = authRepository.authStateFlow
+) : MainViewModel() {
+    val user = authRepository.currentUserIdFlow
 
     fun signOut() {
         authRepository.signOut()

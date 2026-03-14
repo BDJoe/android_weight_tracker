@@ -1,6 +1,6 @@
 package com.josephlimbert.weighttracker.ui.history
 
-import androidx.compose.foundation.Image
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,19 +11,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,37 +33,83 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.NavKey
 import com.josephlimbert.weighttracker.R
-import com.josephlimbert.weighttracker.ui.shared.CenterTopAppBar
+import com.josephlimbert.weighttracker.data.model.Weight
+import com.josephlimbert.weighttracker.data.utils.formatDateToDayOfMonthString
+import com.josephlimbert.weighttracker.data.utils.formatDateToDayOfWeekString
+import com.josephlimbert.weighttracker.data.utils.formatDateToMonthYearString
+import com.josephlimbert.weighttracker.ui.shared.LoadingIndicator
 import com.josephlimbert.weighttracker.ui.sheet.AddWeightSheet
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.Insets
+import com.patrykandpatrick.vico.compose.common.Position
+import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
+import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
+import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import kotlinx.serialization.Serializable
-import kotlin.math.exp
 
 @Serializable
-object HistoryRoute
+data object History : NavKey
 
 @Composable
-fun HistoryScreen(modifier: Modifier) {
-    HistoryScreenContent(modifier = modifier)
+fun HistoryScreen(modifier: Modifier, onNavigateToAddWeight: (weightId: String) -> Unit, viewModel: HistoryViewModel = hiltViewModel()) {
+    val weights = viewModel.weights.collectAsStateWithLifecycle(emptyList())
+    val goalWeight = viewModel.goalWeight.collectAsStateWithLifecycle(null)
+    val userId by viewModel.userId.collectAsStateWithLifecycle(null)
+    var weightsGrouped: Map<String, List<Weight>> by remember { mutableStateOf(emptyMap()) }
+    if (userId == null) {
+        LoadingIndicator()
+    } else {
+        HistoryScreenContent(
+            modifier = modifier,
+            onNavigateToAddWeight = onNavigateToAddWeight,
+            weightsGrouped,
+            weights.value,
+            goalWeight.value,
+            viewModel::deleteWeight
+        )
+    }
+
+    LaunchedEffect(weights.value) {
+        weightsGrouped = weights.value.groupBy { formatDateToMonthYearString(it.recordedDate.toDate()) }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreenContent(modifier: Modifier) {
+fun HistoryScreenContent(
+    modifier: Modifier,
+    onNavigateToAddWeight: (weightId: String) -> Unit,
+    weightsGrouped: Map<String, List<Weight>>,
+    weights: List<Weight>,
+    goalWeight: Double?,
+    deleteWeight: (weightId: String) -> Unit,
+) {
     var showBottomSheet by remember { mutableStateOf(false) }
+    var currentMonthYear by remember { mutableStateOf("NOTHING") }
+    var showDivider by remember { mutableStateOf(false) }
+    var openDeleteDialog by remember {mutableStateOf(false)}
+    var selectedWeightId by remember { mutableStateOf("") }
+    var selectedWeight: Weight? by remember { mutableStateOf(null) }
+
     Scaffold() { innerPadding ->
         Column(modifier = modifier
             .fillMaxSize()
@@ -72,29 +119,65 @@ fun HistoryScreenContent(modifier: Modifier) {
                 start = 4.dp,
                 end = 4.dp
             )) {
-            HistoryChart()
-            LazyColumn() {
-                items(3) {
-                    ListItem(onEdit = { showBottomSheet = true})
+            if (weights.isNotEmpty()) HistoryChart(weights, goalWeight)
+
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                weightsGrouped.forEach  { (month, weights) ->
+                    stickyHeader(key = month) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = month,
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier
+                                    .padding(start = 8.dp, end = 10.dp, top = 8.dp, bottom = 8.dp)
+                            )
+                            HorizontalDivider()
+                        }
+                    }
+
+                    items(items = weights, key = { weight -> weight.id }) { weight ->
+                        ListItem(weight,
+                            onEdit = { onNavigateToAddWeight(weight.id) },
+                            onDelete = {weightId ->
+                                openDeleteDialog = true
+                                selectedWeightId = weightId
+                            })
+                    }
                 }
             }
         }
-        if (showBottomSheet) {
-            AddWeightSheet(onDismiss = { showBottomSheet = false }, onSubmit = { weight, date ->
-                showBottomSheet = false })
+//        if (showBottomSheet) {
+//            AddWeightSheet(
+//                onDismiss = { showBottomSheet = false },
+//                onSubmit = {weight ->
+//                    editWeight(userId, weight)
+//                    showBottomSheet = false },
+//                weight = selectedWeight
+//            )
+//        }
+
+        if (openDeleteDialog){
+            ConfirmDeleteDialog(
+                onDismissRequest = {
+                    openDeleteDialog = false
+                    selectedWeightId = ""
+                },
+                onConfirmation = {
+                    deleteWeight(selectedWeightId)
+                    openDeleteDialog = false
+                    selectedWeightId = ""
+                })
         }
     }
 }
 
 @Composable
-fun ListItem(onEdit: () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "Feb 26", style = MaterialTheme.typography.titleLarge, modifier = Modifier
-                .padding(start = 8.dp, end = 10.dp, top = 8.dp, bottom = 8.dp))
-            HorizontalDivider()
-        }
+fun ListItem(weight: Weight, onEdit: () -> Unit, onDelete: (weightId: String) -> Unit) {
+    val formattedDayOfWeekText = formatDateToDayOfWeekString(weight.recordedDate.toDate())
+    val formattedDayText = formatDateToDayOfMonthString(weight.recordedDate.toDate())
+    val formattedWeightText = weight.weight.toString() + " lbs"
 
+    Column(modifier = Modifier.fillMaxWidth()) {
         OutlinedCard(modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)) {
@@ -103,11 +186,11 @@ fun ListItem(onEdit: () -> Unit) {
                     .width(60.dp)
                     .background(colorResource(R.color.md_theme_secondaryContainer))
                     .padding(vertical = 5.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "Fri", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.W500)
-                    Text(text = "6", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.W500)
+                    Text(text = formattedDayOfWeekText, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.W500)
+                    Text(text = formattedDayText, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.W500)
                 }
 
-                Text(text = "240 lbs", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 15.dp, end = 30.dp))
+                Text(text = formattedWeightText, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 15.dp, end = 30.dp))
 
                 Icon(painterResource(R.drawable.down_arrow_icon), "Weight gain/loss icon", tint = colorResource(R.color.md_theme_success))
 
@@ -115,7 +198,7 @@ fun ListItem(onEdit: () -> Unit) {
                     color = colorResource(R.color.md_theme_success),
                     modifier = Modifier.padding(start = 5.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    DropdownMenu(modifier = Modifier.padding(end = 10.dp), onEdit = onEdit)
+                    DropdownMenu(modifier = Modifier.padding(end = 10.dp), onEdit = onEdit, onDelete = { onDelete(weight.id) })
                 }
 
             }
@@ -124,7 +207,7 @@ fun ListItem(onEdit: () -> Unit) {
 }
 
 @Composable
-fun DropdownMenu(modifier: Modifier, onEdit: () -> Unit) {
+fun DropdownMenu(modifier: Modifier, onEdit: () -> Unit, onDelete: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
@@ -139,33 +222,118 @@ fun DropdownMenu(modifier: Modifier, onEdit: () -> Unit) {
                 onEdit()
                 expanded = false
             })
-            DropdownMenuItem(text = { Text(stringResource(R.string.delete_entry)) }, onClick = {})
+            DropdownMenuItem(text = { Text(stringResource(R.string.delete_entry)) }, onClick = {
+                onDelete()
+                expanded = false
+            })
         }
     }
 }
 
 @Composable
-fun HistoryChart(modifier: Modifier = Modifier) {
+fun ConfirmDeleteDialog(
+    onDismissRequest: () -> Unit,
+    onConfirmation: () -> Unit,
+) {
+    AlertDialog(
+        title = {
+            Text(text = "Are You Sure?")
+        },
+        text = {
+            Text(text = "This action is permanent and cannot be undone!")
+        },
+        onDismissRequest = {
+            onDismissRequest()
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirmation()
+                }
+            ) {
+                Text(text = "Delete", color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    onDismissRequest()
+                }
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun HistoryChart(weights: List<Weight>, goalWeight: Double?) {
     val modelProducer = remember { CartesianChartModelProducer() }
-    LaunchedEffect(Unit) {
+    val decorations = if (goalWeight != null) listOf(rememberHorizontalLine(goalWeight)) else emptyList()
+    val yValues = weights.reversed().map { weight -> weight.weight }
+//    var data by remember { mutableStateOf<Map<LocalDate, Float>>(emptyMap()) }
+//    val xToDateMapKey = ExtraStore.Key<Map<Float, LocalDate>>()
+//    val lineFormatter = rememberLineFormatter(xToDateMapKey)
+//    val bottomAxis = if (data.isNotEmpty()) HorizontalAxis.rememberBottom(valueFormatter = lineFormatter) else HorizontalAxis.rememberBottom()
+
+    LaunchedEffect(weights) {
+//        data = weights.reversed()
+//            .associate { weight -> LocalDateTime.ofInstant(Instant.ofEpochSecond(weight.recordedDate.seconds),
+//                ZoneId.systemDefault()).toLocalDate() to weight.weight.toFloat() }
+//        val xToDates = data.keys.associateBy { it.toEpochDay().toFloat() }
         modelProducer.runTransaction {
-            lineSeries { series(13, 8, 7, 12, 0, 1, 15, 14, 0, 11, 6, 12, 0, 11, 12, 11) }
+            lineSeries { series(y = yValues) }
         }
     }
+
     CartesianChartHost(
         chart =
             rememberCartesianChart(
-                rememberLineCartesianLayer(),
+                rememberLineCartesianLayer(
+                ),
                 startAxis = VerticalAxis.rememberStart(),
                 bottomAxis = HorizontalAxis.rememberBottom(),
+                decorations = decorations
             ),
         modelProducer = modelProducer,
-        modifier = modifier,
     )
+}
+
+//@Composable
+//private fun rememberLineFormatter(xToDateMapKey: ExtraStore.Key<Map<Float, LocalDate>>): CartesianValueFormatter {
+//    val dateTimeFormatter = DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())
+//    return remember {
+//        CartesianValueFormatter { context, value, _ ->
+//            (context.model.extraStore[xToDateMapKey][value?.toFloat()] ?: LocalDate.ofEpochDay(value.toLong()))
+//                .format(dateTimeFormatter)
+//        }
+//    }
+//}
+
+@Composable
+private fun rememberHorizontalLine(goalWeight: Double): HorizontalLine {
+    val fill = Fill(Color.Green)
+    val line = rememberLineComponent(fill = fill, thickness = 2.dp)
+    val labelComponent =
+        rememberTextComponent(
+            margins = Insets(start = 6.dp),
+            padding = Insets(start = 8.dp, top = 2.dp, end = 8.dp, bottom = 4.dp),
+            background =
+                rememberShapeComponent(fill, RoundedCornerShape(bottomStart = 4.dp, bottomEnd = 4.dp)),
+        )
+    return remember {
+        HorizontalLine(
+            y = { goalWeight },
+            line = line,
+            labelComponent = labelComponent,
+            label = { "Goal Weight" },
+            verticalLabelPosition = Position.Vertical.Bottom,
+        )
+    }
 }
 
 @Composable
 @Preview(showSystemUi = false)
 fun HistoryScreenPreview() {
-    HistoryScreen(modifier = Modifier)
+    HistoryScreen(modifier = Modifier, onNavigateToAddWeight = {})
 }

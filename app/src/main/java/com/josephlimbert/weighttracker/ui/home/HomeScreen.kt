@@ -22,6 +22,7 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,29 +37,82 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.NavKey
 import com.josephlimbert.weighttracker.R
+import com.josephlimbert.weighttracker.data.model.Weight
+import com.josephlimbert.weighttracker.data.utils.formatDateToMediumPatternString
+import com.josephlimbert.weighttracker.ui.shared.LoadingIndicator
 import com.josephlimbert.weighttracker.ui.sheet.AddWeightSheet
 import com.josephlimbert.weighttracker.ui.sheet.SetGoalSheet
 import kotlinx.serialization.Serializable
 
 @Serializable
-object HomeRoute
+data object Home : NavKey
+
 
 @Composable
-fun HomeScreen(modifier: Modifier, onNavigateToAuth: () -> Unit) {
-    HomeScreenContent(modifier = modifier, onNavigateToAuth = onNavigateToAuth)
+fun HomeScreen(modifier: Modifier,
+               onNavigateToAuth: () -> Unit,
+               onNavigateToAddWeight: () -> Unit,
+               onNavigateToSetGoal: () -> Unit,
+               viewModel: HomeViewModel = hiltViewModel()
+               ) {
+    val isLoadingUser by viewModel.isLoadingUser.collectAsStateWithLifecycle()
+    val userId by viewModel.userId.collectAsStateWithLifecycle(null)
+    val startingWeight = viewModel.startingWeight.collectAsStateWithLifecycle(null)
+    val currentWeight = viewModel.currentWeight.collectAsStateWithLifecycle(null)
+    val goalWeight = viewModel.goalWeight.collectAsStateWithLifecycle(null)
+    val totalLossPercent = viewModel.totalLossPercent.collectAsStateWithLifecycle(null)
+    val totalLossWeight = viewModel.totalLossWeight.collectAsStateWithLifecycle(null)
+    val targetLoss = viewModel.targetLoss.collectAsStateWithLifecycle(null)
+    val targetLeft = viewModel.targetLeft.collectAsStateWithLifecycle(null)
+    if (isLoadingUser && userId == null) {
+        LoadingIndicator()
+    } else {
+        HomeScreenContent(
+            startingWeight = startingWeight.value,
+            currentWeight = currentWeight.value,
+            goalWeight = goalWeight.value,
+            totalLossPercent = totalLossPercent.value,
+            totalLossWeight = totalLossWeight.value,
+            targetLoss = targetLoss.value,
+            targetLeft = targetLeft.value,
+            modifier = modifier,
+            onNavigateToAuth = onNavigateToAuth,
+            onNavigateToAddWeight = onNavigateToAddWeight,
+            onNavigateToSetGoal = onNavigateToSetGoal
+        )
+    }
+
+    LaunchedEffect(true) {
+        viewModel.loadCurrentUser()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreenContent(modifier: Modifier, onNavigateToAuth: () -> Unit) {
+fun HomeScreenContent(
+    startingWeight: Weight?,
+    currentWeight: Weight?,
+    goalWeight: Double?,
+    totalLossPercent: Double?,
+    totalLossWeight: Double?,
+    targetLoss: Double?,
+    targetLeft: Double?,
+    modifier: Modifier,
+    onNavigateToAuth: () -> Unit,
+    onNavigateToAddWeight: () -> Unit,
+    onNavigateToSetGoal: () -> Unit
+) {
     val scrollState = rememberScrollState()
     var showAddWeightSheet by remember { mutableStateOf(false) }
     var showSetGoalSheet by remember { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddWeightSheet = true }, modifier = modifier) {
+            FloatingActionButton(onClick = onNavigateToAddWeight, modifier = modifier) {
                 Icon(painterResource(R.drawable.add_icon), stringResource(R.string.add_weight))
             }
         }
@@ -75,27 +129,47 @@ fun HomeScreenContent(modifier: Modifier, onNavigateToAuth: () -> Unit) {
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            CurrentWeightCard(onClick = { showSetGoalSheet = true })
-            StatsCard()
+            CurrentWeightCard(
+                startingWeight = startingWeight,
+                currentWeight = currentWeight,
+                goalWeight = goalWeight,
+                totalLossPercent = totalLossPercent,
+                onClick = onNavigateToSetGoal
+            )
+            StatsCard(
+                totalLossWeight = totalLossWeight,
+                targetLoss = targetLoss,
+                targetLeft = targetLeft,
+                startingWeight = startingWeight,
+            )
             Button(onClick = onNavigateToAuth) {
                 Text(text = "Sign In")
             }
         }
 
-        if (showAddWeightSheet) {
-            AddWeightSheet(onDismiss = { showAddWeightSheet = false }, onSubmit = { weight, date ->
-                showAddWeightSheet = false })
-        }
+//        if (showAddWeightSheet) {
+//            AddWeightSheet(onDismiss = { showAddWeightSheet = false },
+//                onSubmit = { weight ->
+//                    addWeight(userId!!, weight)
+//                    showAddWeightSheet = false
+//                })
+//        }
 
-        if (showSetGoalSheet) {
-            SetGoalSheet(onDismiss = { showSetGoalSheet = false }, onSubmit = { weight ->
-                showSetGoalSheet = false })
-        }
+//        if (showSetGoalSheet) {
+//            SetGoalSheet(onDismiss = { showSetGoalSheet = false }, onSubmit = { weight ->
+//                showSetGoalSheet = false })
+//        }
     }
 }
 
 @Composable
-fun CurrentWeightCard(onClick: () -> Unit) {
+fun CurrentWeightCard(
+    startingWeight: Weight?,
+    currentWeight: Weight?,
+    goalWeight: Double?,
+    totalLossPercent: Double?,
+    onClick: () -> Unit
+) {
     OutlinedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -107,7 +181,7 @@ fun CurrentWeightCard(onClick: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                Column() {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = stringResource(R.string.start_weight),
                         modifier = Modifier.padding(bottom = 5.dp),
@@ -115,7 +189,7 @@ fun CurrentWeightCard(onClick: () -> Unit) {
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
-                    Text("250 lbs", style = MaterialTheme.typography.titleMedium)
+                    Text(startingWeight?.weight.toString() + " lbs", style = MaterialTheme.typography.titleMedium)
                 }
 
                 Box() {
@@ -126,7 +200,7 @@ fun CurrentWeightCard(onClick: () -> Unit) {
                             .rotate(-90F),
                         strokeWidth = 10.dp,
                         gapSize = 0.dp,
-                        progress = { 0.5F }
+                        progress = { (totalLossPercent?.toFloat()?.div(100)) ?: 0.0F}
                     )
                     Column(
                         modifier = Modifier.matchParentSize(),
@@ -134,7 +208,7 @@ fun CurrentWeightCard(onClick: () -> Unit) {
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "15%",
+                            text = totalLossPercent?.toInt().toString() + "%",
                             style = MaterialTheme.typography.headlineLarge,
                             fontWeight = FontWeight.W500
                         )
@@ -143,14 +217,14 @@ fun CurrentWeightCard(onClick: () -> Unit) {
                             style = MaterialTheme.typography.headlineSmall
                         )
                         Text(
-                            text = "230 lbs",
+                            text = currentWeight?.weight.toString() + " lbs",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.W500
                         )
                     }
                 }
 
-                Column() {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = stringResource(R.string.goal_weight),
                         modifier = Modifier.padding(bottom = 5.dp),
@@ -158,18 +232,36 @@ fun CurrentWeightCard(onClick: () -> Unit) {
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
-                    Text("175 lbs", style = MaterialTheme.typography.titleMedium)
+                    Text(goalWeight?.toString() + " lbs", style = MaterialTheme.typography.titleMedium)
                 }
             }
-            Button(onClick = onClick, modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 20.dp)) {
-                Text(text = stringResource(R.string.set_goal_weight), fontSize = 24.sp, modifier = Modifier.padding(vertical = 5.dp))
+            if (goalWeight == null || goalWeight <= 0) {
+                Button(
+                    onClick = onClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 10.dp, horizontal = 20.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.set_goal_weight),
+                        fontSize = 24.sp,
+                        modifier = Modifier.padding(vertical = 5.dp)
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun StatsCard() {
+fun StatsCard(
+    totalLossWeight: Double?,
+    targetLoss: Double?,
+    targetLeft: Double?,
+    startingWeight: Weight?,
+) {
+    val formattedDate = if (startingWeight != null) formatDateToMediumPatternString(startingWeight.recordedDate.toDate()) else "N/A"
+
     OutlinedCard(modifier = Modifier
         .fillMaxWidth()
         .padding(8.dp)) {
@@ -186,18 +278,18 @@ fun StatsCard() {
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(text = stringResource(R.string.target_loss), style = MaterialTheme.typography.bodyLarge)
-                    Text(text = "50 lbs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W500)
+                    Text(text = targetLoss?.toString() + " lbs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W500)
                     Spacer(modifier = Modifier.size(10.dp))
                     Text(text = stringResource(R.string.remaining), style = MaterialTheme.typography.bodyLarge)
-                    Text(text = "50 lbs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W500)
+                    Text(text = targetLeft?.toString() + " lbs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W500)
                 }
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(text = stringResource(R.string.lost_so_far), style = MaterialTheme.typography.bodyLarge)
-                    Text(text = "50 lbs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W500)
+                    Text(text = totalLossWeight?.toString() + " lbs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W500)
                     Spacer(modifier = Modifier.size(10.dp))
                     Text(text = stringResource(R.string.start_date), style = MaterialTheme.typography.bodyLarge)
-                    Text(text = "Feb 29, 2026", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W500)
+                    Text(text = formattedDate, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W500)
                 }
             }
         }
@@ -208,6 +300,6 @@ fun StatsCard() {
 @Preview(showSystemUi = true)
 fun HomeScreenPreview() {
     MaterialTheme() {
-        HomeScreen(modifier = Modifier, onNavigateToAuth = {})
+        HomeScreen(modifier = Modifier, onNavigateToAuth = {}, onNavigateToAddWeight = {}, onNavigateToSetGoal = {})
     }
 }

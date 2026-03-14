@@ -1,14 +1,11 @@
 package com.josephlimbert.weighttracker.ui.sheet
 
-import android.icu.text.SimpleDateFormat
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -17,17 +14,15 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,27 +37,61 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation3.runtime.NavKey
 import com.josephlimbert.weighttracker.R
+import com.josephlimbert.weighttracker.data.model.Weight
+import com.josephlimbert.weighttracker.data.utils.ResultEffect
+import com.josephlimbert.weighttracker.data.utils.ResultEventBus
+import com.josephlimbert.weighttracker.data.utils.formatDateToMediumPatternString
+import com.josephlimbert.weighttracker.data.utils.formatMillisToDateString
+import com.josephlimbert.weighttracker.data.utils.formatStringToTimestamp
+import com.josephlimbert.weighttracker.ui.shared.LoadingIndicator
+import kotlinx.serialization.Serializable
 import java.util.Date
-import java.util.Locale
+
+@Serializable
+data class AddWeight(val weightId: String? = null) : NavKey
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddWeightSheet(onDismiss: () -> Unit, onSubmit: (weight: String?, date: Long?) -> Unit) {
-    AddWeightSheetContent(onDismiss = onDismiss, onSubmit = onSubmit)
+fun AddWeightSheet(onDismiss: () -> Unit, weightId: String? = null, viewModel: AddWeightViewModel = hiltViewModel()) {
+    var weight: Weight? by remember { mutableStateOf(null) }
+    val userId = viewModel.userId.collectAsStateWithLifecycle(null)
+
+    if (weight != null) {
+        AddWeightSheetContent(
+            onSubmit = { newWeight ->
+                viewModel.addWeight(userId.value!!, newWeight)
+                onDismiss()
+            },
+            selectedWeight = weight!!
+        )
+    } else {
+        LoadingIndicator()
+    }
+
+    LaunchedEffect(true) {
+        weight = viewModel.getWeight(weightId)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddWeightSheetContent(onDismiss: () -> Unit, onSubmit: (weight: String?, date: Long?) -> Unit) {
-    val weightState = rememberTextFieldState("")
-    var selectedDate by remember { mutableStateOf<Long?>(null) }
+fun AddWeightSheetContent(onSubmit: (weight: Weight) -> Unit, selectedWeight: Weight) {
+    val weightState = rememberTextFieldState(selectedWeight.weight.toString())
+    var selectedDate by remember { mutableStateOf(formatDateToMediumPatternString(Date())) }
     var showModal by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
+    val titleText = if (selectedWeight.id.isNotBlank()) stringResource(R.string.edit_weight_label) else stringResource(R.string.add_new_weight)
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+    if (selectedWeight.id.isNotBlank()) {
+        selectedDate = formatDateToMediumPatternString(selectedWeight.recordedDate.toDate())
+    }
+
         Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = stringResource(R.string.add_new_weight), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.W500)
+            Text(text = titleText, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.W500)
             OutlinedTextField(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -72,7 +101,7 @@ fun AddWeightSheetContent(onDismiss: () -> Unit, onSubmit: (weight: String?, dat
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
             OutlinedTextField(
-                value = selectedDate?.let {convertMillisToDate(it) } ?: "",
+                value = selectedDate,
                 onValueChange = { },
                 label = { Text("Date") },
                 placeholder = { Text("MM/DD/YYYY") },
@@ -98,13 +127,15 @@ fun AddWeightSheetContent(onDismiss: () -> Unit, onSubmit: (weight: String?, dat
             )
 
             if (showModal) {
-                DatePickerModal(onDateSelected = { selectedDate = it }, onDismiss = { showModal = false })
+                DatePickerModal(onDateSelected = { selectedDate = formatMillisToDateString(it!!) }, onDismiss = { showModal = false })
             }
-            Button(onClick = { onSubmit(weightState.text.toString(), selectedDate) }, modifier = Modifier.padding(top = 50.dp)) {
+            Button(onClick = {
+
+                onSubmit(selectedWeight.copy(weight = weightState.text.toString().toDouble(), recordedDate = formatStringToTimestamp(selectedDate)))
+            }, modifier = Modifier.padding(top = 50.dp)) {
                 Text("Submit")
             }
         }
-    }
 }
 
 @Composable
@@ -134,14 +165,9 @@ fun DatePickerModal(
     }
 }
 
-fun convertMillisToDate(millis: Long): String {
-    val formatter = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
-    return formatter.format(Date(millis))
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Preview(showSystemUi = false)
 fun AddWeightSheetPreview() {
-    AddWeightSheet(onDismiss = {}, onSubmit = {weight, date -> })
+    AddWeightSheet(onDismiss = {})
 }

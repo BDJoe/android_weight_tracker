@@ -1,15 +1,15 @@
 package com.josephlimbert.weighttracker.ui.home
 
 import android.util.Log
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseUser
+import com.josephlimbert.weighttracker.MainViewModel
 import com.josephlimbert.weighttracker.data.model.User
 import com.josephlimbert.weighttracker.data.model.Weight
 import com.josephlimbert.weighttracker.data.repository.AuthRepository
-import com.josephlimbert.weighttracker.data.repository.AuthResult
 import com.josephlimbert.weighttracker.data.repository.FirestoreRepository
-import com.josephlimbert.weighttracker.data.repository.FirestoreResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,36 +18,25 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.security.MessageDigest
+import java.security.NoSuchAlgorithmException
 import javax.inject.Inject
-
-data class UiState(
-    val isLoading: Boolean = false,
-    val profile: User? = null,
-    val currentWeight: Weight? = null,
-    val startingWeight: Weight? = null,
-    val goalWeight: Double? = null,
-    val totalLossPercent: Double = 0.0,
-    val totalLossWeight: Double = 0.0,
-    val targetLoss: Double = 0.0,
-    val targetLeft: Double = 0.0,
-)
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val firestoreRepository: FirestoreRepository,
     private val authRepository: AuthRepository
-): ViewModel() {
-    private val _uiState = MutableStateFlow(UiState())
-    private val _goalWeight = MutableStateFlow<Double?>(null)
+): MainViewModel() {
+    private val _isLoadingUser = MutableStateFlow(true)
+    val userId = authRepository.currentUserIdFlow
+    val isLoadingUser: StateFlow<Boolean>
+        get() = _isLoadingUser.asStateFlow()
     val currentWeight = firestoreRepository.currentWeight
     val startingWeight = firestoreRepository.startingWeight
-    val goalWeight: StateFlow<Double?>
-        get() =_goalWeight.asStateFlow()
-    val auth = authRepository.authStateFlow
-    val userProfile = firestoreRepository.userProfile
+    val goalWeight = firestoreRepository.goalWeight
 
     val totalLossPercent: StateFlow<Double> =
-        combine(startingWeight, currentWeight, _goalWeight) { starting, current, goal ->
+        combine(startingWeight, currentWeight, goalWeight) { starting, current, goal ->
             val result = if (starting != null && current != null && goal != null) {
                 (((starting.weight - current.weight) / (starting.weight - goal)) * 100.0).coerceAtMost(
                     100.0
@@ -73,7 +62,7 @@ class HomeViewModel @Inject constructor(
         )
 
     val targetLoss: StateFlow<Double> =
-        combine(startingWeight, _goalWeight) { starting, goal ->
+        combine(startingWeight, goalWeight) { starting, goal ->
             val result = if (starting != null && goal != null) {
                 starting.weight - goal
             } else { 0.0 }
@@ -85,7 +74,7 @@ class HomeViewModel @Inject constructor(
         )
 
     val targetLeft: StateFlow<Double> =
-        combine(startingWeight, currentWeight, _goalWeight) { starting, current, goal ->
+        combine(startingWeight, currentWeight, goalWeight) { starting, current, goal ->
             val result = if (starting != null && current != null && goal != null) {
                 (starting.weight - goal) - (starting.weight - current.weight)
             } else { 0.0 }
@@ -96,20 +85,15 @@ class HomeViewModel @Inject constructor(
             initialValue = 0.0
         )
 
-    init {
-        viewModelScope.launch {
-            firestoreRepository.userProfile.collect { user ->
-                _goalWeight.value = user?.goalWeight
+    fun loadCurrentUser() {
+        launchCatching {
+            if (authRepository.currentUser == null) {
+                val user = authRepository.createGuestAccount()
+                firestoreRepository.createUserProfile(user!!)
             }
+
+            _isLoadingUser.value = false
         }
-    }
-
-    suspend fun createGuestAccount(): AuthResult<FirebaseUser> {
-        return authRepository.createGuestAccount()
-    }
-
-    suspend fun createUserProfile(user: FirebaseUser): FirestoreResult<Unit> {
-        return firestoreRepository.createUserProfile(user)
     }
 //    val uiState: StateFlow<UiState>
 //        get() = _uiState.asStateFlow()

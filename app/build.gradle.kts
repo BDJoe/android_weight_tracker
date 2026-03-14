@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.android.hilt)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.jetbrains.kotlin.serialization)
 }
 
 android {
@@ -47,6 +48,7 @@ dependencies {
     implementation(libs.ui)
     implementation(libs.ui.graphics)
     implementation(libs.material3.adaptive.navigation.suite)
+    implementation(libs.androidx.material3)
     // Add compose support
     val composeBom = platform("androidx.compose:compose-bom:2026.02.01")
     implementation(composeBom)
@@ -62,11 +64,14 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
-    // Optional - Add window size utils
-    implementation("androidx.compose.material3.adaptive:adaptive")
+    // Navigation 3
+    implementation(libs.androidx.navigation3.ui)
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+    implementation(libs.kotlinx.serialization.core)
 
-    // Navigation Compose
-    implementation("androidx.navigation:navigation-compose:2.9.7")
+    // Hilt with compose navigation
+    implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
 
     implementation(libs.android.hilt)
     ksp(libs.android.hilt.compiler)

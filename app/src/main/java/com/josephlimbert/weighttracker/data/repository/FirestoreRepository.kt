@@ -21,10 +21,6 @@ import javax.inject.Inject
 import kotlin.text.get
 import kotlin.text.set
 
-sealed class FirestoreResult<out T> {
-    data class Success<T>(val data: T) : FirestoreResult<T>()
-    data class Error(val message: String) : FirestoreResult<Nothing>()
-}
 class FirestoreRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: AuthRepository
@@ -34,37 +30,38 @@ class FirestoreRepository @Inject constructor(
     ///////////////////////////////////////
     @OptIn(ExperimentalCoroutinesApi::class)
     val weightList: Flow<List<Weight>>
-        get() = auth.authStateFlow.flatMapLatest { user ->
+        get() = auth.currentUserIdFlow.flatMapLatest { userId ->
         firestore
             .collection(WEIGHT_ITEMS_COLLECTION)
-            .whereEqualTo(USER_ID_FIELD, user?.uid)
+            .whereEqualTo(USER_ID_FIELD, userId)
             .orderBy("recordedDate", Query.Direction.DESCENDING)
             .dataObjects<Weight>()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val userProfile: Flow<User?>
-        get() = auth.authStateFlow.flatMapLatest { user ->
-            if (user != null) {
+    val goalWeight: Flow<Double?>
+        get() = auth.currentUserIdFlow.flatMapLatest { userId ->
+            if (userId != null) {
                 firestore
                     .collection(USER_COLLECTION)
-                    .document(user.uid ?: "")
+                    .document(userId)
                     .snapshots()
                     .map { document ->
-                        document.toObject()
+                        val user = document.toObject<User>()
+                        user?.goalWeight
                     }
             } else {
-                emptyFlow<User>()
+                emptyFlow<Double>()
             }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val currentWeight: Flow<Weight?>
-        get() = auth.authStateFlow.flatMapLatest { user ->
-            if (user != null) {
+        get() = auth.currentUserIdFlow.flatMapLatest { userId ->
+            if (userId != null) {
                 firestore
                     .collection(WEIGHT_ITEMS_COLLECTION)
-                    .whereEqualTo(USER_ID_FIELD, user.uid)
+                    .whereEqualTo(USER_ID_FIELD, userId)
                     .orderBy("recordedDate", Query.Direction.DESCENDING)
                     .limit(1)
                     .dataObjects<Weight>()
@@ -79,11 +76,11 @@ class FirestoreRepository @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val startingWeight: Flow<Weight?>
-        get() = auth.authStateFlow.flatMapLatest { user ->
-            if (user != null) {
+        get() = auth.currentUserIdFlow.flatMapLatest { userId ->
+            if (userId != null) {
                 firestore
                     .collection(WEIGHT_ITEMS_COLLECTION)
-                    .whereEqualTo(USER_ID_FIELD, user.uid)
+                    .whereEqualTo(USER_ID_FIELD, userId)
                     .orderBy("recordedDate", Query.Direction.ASCENDING)
                     .limit(1)
                     .dataObjects<Weight>()
@@ -96,89 +93,58 @@ class FirestoreRepository @Inject constructor(
             }
         }
 
-    suspend fun  getWeight(weightId: String): FirestoreResult<Weight?> {
-        return try {
-            val weight = firestore
+    suspend fun  getWeight(weightId: String): Weight? {
+        return firestore
                 .collection(WEIGHT_ITEMS_COLLECTION)
                 .document(weightId)
                 .get()
                 .await()
                 .toObject<Weight>()
-            FirestoreResult.Success(weight)
-        } catch (e: Exception) {
-            FirestoreResult.Error(e.message ?: "An unknown error has occurred")
-        }
     }
 
-    suspend fun addWeight(weight: Weight): FirestoreResult<Unit> {
-        return try {
-            firestore
-                .collection(WEIGHT_ITEMS_COLLECTION)
-                .document(weight.id)
-                .set(weight)
-                .await()
-            FirestoreResult.Success(Unit)
-        } catch (e: Exception) {
-            FirestoreResult.Error(e.message ?: "An unknown error has occurred")
-        }
+    suspend fun addWeight(weight: Weight) {
+        firestore
+            .collection(WEIGHT_ITEMS_COLLECTION)
+            .document(weight.id)
+            .set(weight)
+            .await()
     }
 
-    suspend fun deleteWeight(weightId: String): FirestoreResult<Unit> {
-        return try {
-            firestore
-                .collection(WEIGHT_ITEMS_COLLECTION)
-                .document(weightId)
-                .delete()
-                .await()
-            FirestoreResult.Success(Unit)
-        } catch (e: Exception) {
-            FirestoreResult.Error(e.message ?: "An unknown error has occurred")
-        }
+    suspend fun deleteWeight(weightId: String) {
+        firestore
+            .collection(WEIGHT_ITEMS_COLLECTION)
+            .document(weightId)
+            .delete()
+            .await()
     }
 
     ///////////////////////////////////////
     // User Profile
     ///////////////////////////////////////
 
-    suspend fun createUserProfile(user: FirebaseUser): FirestoreResult<Unit> {
-        return try {
-            val newUser =
-                User(id = user.uid, email = user.email ?: "")
-            firestore
-                .collection(USER_COLLECTION)
-                .document(newUser.id)
-                .set(newUser)
-                .await()
-            FirestoreResult.Success(Unit)
-        } catch (e: Exception) {
-            FirestoreResult.Error(e.message ?: "An unknown error has occurred")
-        }
+    suspend fun createUserProfile(user: FirebaseUser) {
+        val newUser = User(id = user.uid, email = user.email ?: "")
+        firestore
+            .collection(USER_COLLECTION)
+            .document(newUser.id)
+            .set(newUser)
+            .await()
     }
 
-    suspend fun linkUserProfile(user: FirebaseUser): FirestoreResult<Unit> {
-        return try {
-            firestore
-                .collection(USER_COLLECTION)
-                .document(user.uid)
-                .update("email", user.email)
-                .await()
-            FirestoreResult.Success(Unit)
-        } catch (e: Exception) {
-            FirestoreResult.Error(e.message ?: "An unknown error has occurred")
-        }
+    suspend fun linkUserProfile(user: FirebaseUser) {
+        firestore
+            .collection(USER_COLLECTION)
+            .document(user.uid)
+            .update("email", user.email)
+            .await()
     }
 
-    suspend fun setGoalWeight(userId: String, weight: Double): FirestoreResult<Unit> {
-            return try {
-                firestore
-                    .collection(USER_COLLECTION)
-                    .document(userId)
-                    .update("goalWeight", weight)
-                    .await()
-                FirestoreResult.Success(Unit)
-            } catch (e: Exception) {
-                FirestoreResult.Error(e.message ?: "An unknown error has occurred")
-            }
+    suspend fun setGoalWeight(userId: String, weight: Double) {
+            firestore
+                .collection(USER_COLLECTION)
+                .document(userId)
+                .update("goalWeight", weight)
+                .await()
     }
 
     companion object {
