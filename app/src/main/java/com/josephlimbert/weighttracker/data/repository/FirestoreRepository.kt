@@ -122,12 +122,11 @@ class FirestoreRepository @Inject constructor(
     // User Profile
     ///////////////////////////////////////
 
-    suspend fun createUserProfile(user: FirebaseUser) {
-        val newUser = User(id = user.uid, email = user.email ?: "")
+    suspend fun createUserProfile(user: User) {
         firestore
             .collection(USER_COLLECTION)
-            .document(newUser.id)
-            .set(newUser)
+            .document(user.id)
+            .set(user)
             .await()
     }
 

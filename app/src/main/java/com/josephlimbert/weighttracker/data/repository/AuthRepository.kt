@@ -25,12 +25,17 @@ class AuthRepository @Inject constructor(
             awaitClose { auth.removeAuthStateListener(listener) }
         }
 
-    suspend fun createGuestAccount(): FirebaseUser? {
-        return auth.signInAnonymously().await().user
+    suspend fun createGuestAccount(): String? {
+        return auth.signInAnonymously().await().user?.uid
     }
 
     suspend fun signInWithEmail(email: String, password: String) {
         auth.signInWithEmailAndPassword(email, password).await()
+    }
+
+    suspend fun signUpWithEmail(email: String, password: String): String? {
+        val userId = auth.createUserWithEmailAndPassword(email, password).await().user?.uid
+        return userId
     }
 
     suspend fun linkAccount(email: String, password: String): FirebaseUser? {

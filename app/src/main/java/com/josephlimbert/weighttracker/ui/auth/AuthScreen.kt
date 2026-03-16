@@ -2,7 +2,9 @@ package com.josephlimbert.weighttracker.ui.auth
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -10,6 +12,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -23,6 +26,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -41,14 +45,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import com.josephlimbert.weighttracker.R
 import com.josephlimbert.weighttracker.data.model.ErrorMessage
+import com.josephlimbert.weighttracker.data.model.User
+import com.josephlimbert.weighttracker.data.model.Weight
 import kotlinx.serialization.Serializable
 
 @Serializable
 data object Auth : NavKey
 
-enum class AuthMethod(val value: Int) {
-    SIGN_IN(value = 0),
-    SIGN_UP(value = 1),
+enum class AuthMethod(val label: String) {
+    SIGN_IN(label = "Sign In"),
+    SIGN_UP(label = "Register"),
+}
+
+enum class WeightUnit(val label: String, val value: String) {
+    POUND(label = "Pound (lb)", value = " lbs"),
+    KILO(label = "Kilogram (kg)", value = " kgs")
 }
 
 enum class Layout() {
@@ -69,14 +80,11 @@ fun AuthScreen(
     } else {
         AuthScreenContent(
             onCloseDialog = openHomeScreen,
-            signIn = {_, _, _ ->
-                openHomeScreen()
-            },
-            signUp = {_, _, _ ->
+            signIn = { _, _, _ ->
 
             },
-            showErrorSnackbar = showErrorSnackbar
-        )
+            signUp = viewModel::signUpWithEmail,
+            showErrorSnackbar = showErrorSnackbar)
     }
 }
 
@@ -85,15 +93,21 @@ fun AuthScreen(
 fun AuthScreenContent(
     onCloseDialog: () -> Unit,
     signIn: (String, String, (ErrorMessage) -> Unit) -> Unit,
-    signUp: (String, String, (ErrorMessage) -> Unit) -> Unit,
+    signUp: (email: String, password: String, name: String, goalWeight: Double, weightUnit: String, (ErrorMessage) -> Unit) -> Unit,
     showErrorSnackbar: (ErrorMessage) -> Unit
 ) {
     var currentPage by remember { mutableStateOf(Layout.AUTHENTICATE) }
+    val emailState: TextFieldState = rememberTextFieldState("")
+    val passwordState: TextFieldState = rememberTextFieldState("")
+    val confirmPasswordState: TextFieldState = rememberTextFieldState("")
+    val nameState: TextFieldState = rememberTextFieldState("")
+    val goalWeightState: TextFieldState = rememberTextFieldState("")
+    val weightUnitState = remember { mutableStateOf(WeightUnit.POUND) }
 
     Scaffold(
         topBar = { CenterAlignedTopAppBar(
             title = { when (currentPage) {
-                Layout.AUTHENTICATE -> Text("Log In/Register")
+                Layout.AUTHENTICATE -> Text("Sign In/Register")
                 Layout.PROFILE -> Text("Create Profile")
             } },
             navigationIcon = {
@@ -129,15 +143,29 @@ fun AuthScreenContent(
             when (screen) {
                 Layout.AUTHENTICATE ->  Authenticate(
                     modifier = modifier,
-                    signIn = signIn,
-                    signUp = { email, password, showErrorSnackbar ->
+                    emailState = emailState,
+                    passwordState = passwordState,
+                    confirmPasswordState = confirmPasswordState,
+                    signIn = { signIn(emailState.text.toString(), passwordState.text.toString(), showErrorSnackbar) },
+                    signUp = {
                         currentPage = Layout.PROFILE
-                        signUp(email, password, showErrorSnackbar)
-                    },
-                    showErrorSnackbar = showErrorSnackbar
+                    }
                 )
 
-                Layout.PROFILE -> CreateProfile(modifier = modifier)
+                Layout.PROFILE -> CreateProfile(
+                    modifier = modifier,
+                    nameState = nameState,
+                    goalWeightState = goalWeightState,
+                    weightUnitState = weightUnitState,
+                    signUp = {
+                        signUp(
+                            emailState.text.toString(),
+                            passwordState.text.toString(),
+                            nameState.text.toString(),
+                            goalWeightState.text.toString().toDouble(),
+                            weightUnitState.value.value,
+                            showErrorSnackbar)
+                    })
             }
         }
     }
@@ -146,16 +174,15 @@ fun AuthScreenContent(
 @Composable
 fun Authenticate(
     modifier: Modifier,
-    signIn: (String, String, (ErrorMessage) -> Unit) -> Unit,
-    signUp: (String, String, (ErrorMessage) -> Unit) -> Unit,
-    showErrorSnackbar: (ErrorMessage) -> Unit
+    emailState: TextFieldState,
+    passwordState: TextFieldState,
+    confirmPasswordState: TextFieldState,
+    signIn: () -> Unit,
+    signUp: () -> Unit,
 ) {
-    var selectedIndex by remember { mutableIntStateOf(AuthMethod.SIGN_IN.value) }
-    val options = listOf("Sign In", "Register")
-    val emailState: TextFieldState = rememberTextFieldState("")
-    val passwordState: TextFieldState = rememberTextFieldState("")
-    val confirmPasswordState: TextFieldState = rememberTextFieldState("")
-    val isMatchingPassword = if (selectedIndex == 1 && confirmPasswordState.text.isNotEmpty()) {
+    var selectedMethod by remember { mutableStateOf<AuthMethod>(AuthMethod.SIGN_IN) }
+    val options = AuthMethod.entries
+    val isMatchingPassword = if (selectedMethod == AuthMethod.SIGN_UP && confirmPasswordState.text.isNotEmpty()) {
         passwordState.text == confirmPasswordState
     } else true
     var isSubmitting by remember { mutableStateOf(false) }
@@ -165,7 +192,7 @@ fun Authenticate(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         SingleChoiceSegmentedButtonRow {
-            options.forEachIndexed { index, label ->
+            options.forEachIndexed { index, method ->
                 SegmentedButton(
                     shape = SegmentedButtonDefaults.itemShape(
                         index = index,
@@ -176,10 +203,10 @@ fun Authenticate(
                             emailState.clearText()
                             passwordState.clearText()
                             confirmPasswordState.clearText()
-                            selectedIndex = index
+                            selectedMethod = method
                         },
-                    selected = index == selectedIndex,
-                    label = { Text(label) }
+                    selected = method == selectedMethod,
+                    label = { Text(method.label) }
                 )
             }
         }
@@ -203,7 +230,7 @@ fun Authenticate(
             state = passwordState,
             label = { Text("Password") },
         )
-        AnimatedVisibility(selectedIndex == AuthMethod.SIGN_UP.value) {
+        AnimatedVisibility(selectedMethod == AuthMethod.SIGN_UP) {
             OutlinedSecureTextField(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -221,58 +248,100 @@ fun Authenticate(
                 },
             )
         }
-        Button(onClick = {
+        Button(
+            onClick = {
             isSubmitting = true
-            if (isMatchingPassword && selectedIndex == AuthMethod.SIGN_IN.value
+            if (isMatchingPassword && selectedMethod == AuthMethod.SIGN_IN
             ) {
-                signIn(emailState.text.toString(), passwordState.text.toString(), showErrorSnackbar)
-            } else if (isMatchingPassword && selectedIndex == AuthMethod.SIGN_UP.value) {
-                signUp(emailState.text.toString(), passwordState.text.toString(), showErrorSnackbar)
+                signIn()
+            } else if (isMatchingPassword && selectedMethod == AuthMethod.SIGN_UP) {
+                signUp()
             }
             passwordState.clearText()
             confirmPasswordState.clearText()
             isSubmitting = false
         }, modifier = Modifier.padding(top = 50.dp), enabled = !isSubmitting) {
-            Text("Submit")
+            when (selectedMethod) {
+                AuthMethod.SIGN_IN -> {
+                    Text(selectedMethod.label, style = MaterialTheme.typography.titleLarge)
+                }
+
+                AuthMethod.SIGN_UP -> {
+                    Text(selectedMethod.label, style = MaterialTheme.typography.titleLarge)
+                }
+            }
+        }
+
+        Button(
+            onClick = {
+
+            }, modifier = Modifier.padding(top = 20.dp), enabled = !isSubmitting,
+            colors = ButtonDefaults.filledTonalButtonColors()) {
+            Text("Continue as Guest", style = MaterialTheme.typography.titleLarge)
         }
     }
 }
 
 @Composable
-fun CreateProfile(modifier: Modifier) {
+fun CreateProfile(
+    modifier: Modifier,
+    nameState: TextFieldState,
+    goalWeightState: TextFieldState,
+    weightUnitState: MutableState<WeightUnit>,
+    signUp: () -> Unit) {
+    val options = listOf("Pound (lb)", "Kilogram (kg)")
+    var selectedOption by remember { mutableIntStateOf(0) }
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Create A New Profile")
         OutlinedTextField(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 40.dp, start = 10.dp, end = 10.dp),
-            state = TextFieldState(),
+            state = nameState,
             label = { Text("Name") }
         )
         OutlinedTextField(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 40.dp, start = 10.dp, end = 10.dp),
-            state = TextFieldState(),
-            label = { Text("Goal Weight") }
+            state = goalWeightState,
+            label = { Text("Goal Weight") },
+            supportingText = { Text("This can be changed later")}
         )
-        OutlinedTextField(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 40.dp, start = 10.dp, end = 10.dp),
-            state = TextFieldState(),
-            label = { Text("Preferred Weight Units") }
-        )
+
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 40.dp, start = 20.dp, end = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Weight Unit", style = MaterialTheme.typography.titleMedium)
+            SingleChoiceSegmentedButtonRow {
+                WeightUnit.entries.forEachIndexed { index, unit ->
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = options.size
+                        ),
+                        onClick =
+                            {
+                                weightUnitState.value = unit
+                            },
+                        selected = index == selectedOption,
+                        label = { Text(unit.label) }
+                    )
+                }
+            }
+        }
+
+        Button(onClick = signUp, modifier = Modifier.padding(top = 40.dp)) {
+            Text("Submit", style = MaterialTheme.typography.titleLarge)
+        }
     }
 }
 
 @Composable
 @Preview(showSystemUi = true)
 fun AuthScreenContentPreview() {
-    MaterialTheme() {
-        AuthScreenContent(signIn = {_,_,_ ->}, signUp = {_,_,_->}, onCloseDialog = {}, showErrorSnackbar = {})
-    }
+        AuthScreenContent(signIn = {_,_,_ ->}, signUp = {_,_,_,_,_,_->}, onCloseDialog = {}, showErrorSnackbar = {})
 }

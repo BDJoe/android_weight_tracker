@@ -2,6 +2,7 @@ package com.josephlimbert.weighttracker.ui.auth
 
 import com.josephlimbert.weighttracker.MainViewModel
 import com.josephlimbert.weighttracker.data.model.ErrorMessage
+import com.josephlimbert.weighttracker.data.model.User
 import com.josephlimbert.weighttracker.data.repository.AuthRepository
 import com.josephlimbert.weighttracker.data.repository.FirestoreRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,10 +23,18 @@ class AuthViewModel @Inject constructor(private val firestoreRepository: Firesto
         }
     }
 
-    fun signUpWithEmail(email: String, password: String, showErrorSnackbar: (ErrorMessage) -> Unit) {
+    fun signUpWithEmail(email: String, password: String, name: String, goalWeight: Double, weightUnit: String, showErrorSnackbar: (ErrorMessage) -> Unit) {
         launchCatching(showErrorSnackbar) {
-            val user = authRepository.linkAccount(email, password)
-            firestoreRepository.linkUserProfile(user!!)
+            val userId = authRepository.signUpWithEmail(email, password)
+            firestoreRepository.createUserProfile(User(id = userId!!, email = email, goalWeight = goalWeight, name = name, weightUnit = weightUnit))
+            _shouldRestartApp.value = true
+        }
+    }
+
+    fun createGuestAccount(name: String, goalWeight: Double, weightUnit: String, showErrorSnackbar: (ErrorMessage) -> Unit) {
+        launchCatching {
+            val userId = authRepository.createGuestAccount()
+            firestoreRepository.createUserProfile(User(id = userId!!, email = "", goalWeight = goalWeight, name = name, weightUnit = weightUnit))
             _shouldRestartApp.value = true
         }
     }

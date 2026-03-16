@@ -88,8 +88,8 @@ class HomeViewModel @Inject constructor(
     fun loadCurrentUser() {
         launchCatching {
             if (authRepository.currentUser == null) {
-                val user = authRepository.createGuestAccount()
-                firestoreRepository.createUserProfile(user!!)
+//                val user = authRepository.createGuestAccount()
+//                firestoreRepository.createUserProfile(user!!)
             }
 
             _isLoadingUser.value = false
