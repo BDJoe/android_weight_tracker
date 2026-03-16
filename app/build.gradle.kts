@@ -49,6 +49,7 @@ dependencies {
     implementation(libs.ui.graphics)
     implementation(libs.material3.adaptive.navigation.suite)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.animation)
     // Add compose support
     val composeBom = platform("androidx.compose:compose-bom:2026.02.01")
     implementation(composeBom)
@@ -75,7 +76,6 @@ dependencies {
 
     implementation(libs.android.hilt)
     ksp(libs.android.hilt.compiler)
-    implementation(libs.graph.view)
     implementation(libs.vico.compose.m3)
     implementation(libs.circularseekbar)
     implementation(libs.firebase.firestore)

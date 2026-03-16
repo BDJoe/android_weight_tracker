@@ -1,7 +1,5 @@
-package com.josephlimbert.weighttracker.ui.signin
+package com.josephlimbert.weighttracker.ui.auth
 
-import androidx.lifecycle.ViewModel
-import com.google.firebase.auth.FirebaseUser
 import com.josephlimbert.weighttracker.MainViewModel
 import com.josephlimbert.weighttracker.data.model.ErrorMessage
 import com.josephlimbert.weighttracker.data.repository.AuthRepository

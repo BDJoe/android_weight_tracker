@@ -26,4 +26,8 @@ class HistoryViewModel @Inject constructor(private val firestoreRepository: Fire
             firestoreRepository.deleteWeight(weightId)
         }
     }
+
+    fun getWeightDiff(weight: Double, prevWeight: Double): Double {
+        return weight - prevWeight
+    }
 }

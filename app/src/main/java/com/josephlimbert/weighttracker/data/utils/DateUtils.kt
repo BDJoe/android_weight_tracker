@@ -2,6 +2,8 @@ package com.josephlimbert.weighttracker.data.utils
 
 import android.icu.text.DateFormat
 import android.icu.text.SimpleDateFormat
+import android.icu.util.Calendar
+import android.icu.util.TimeZone
 import com.google.firebase.Timestamp
 import java.time.ZoneId
 import java.util.Date
@@ -33,6 +35,8 @@ fun formatStringToTimestamp(date: String): Timestamp {
 }
 
 fun formatMillisToDateString(millis: Long): String {
-    val formatter = SimpleDateFormat("MM/dd/yyyy")
+    val formatter = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
     return formatter.format(Date(millis))
 }

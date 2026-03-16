@@ -1,5 +1,6 @@
 package com.josephlimbert.weighttracker.ui.sheet
 
+import android.util.Log
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -17,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -127,7 +129,10 @@ fun AddWeightSheetContent(onSubmit: (weight: Weight) -> Unit, selectedWeight: We
             )
 
             if (showModal) {
-                DatePickerModal(onDateSelected = { selectedDate = formatMillisToDateString(it!!) }, onDismiss = { showModal = false })
+                DatePickerModal(onDateSelected = {
+                    selectedDate = formatMillisToDateString(it!!)
+                                                 Log.d("DATE", it.toString())
+                                                 }, onDismiss = { showModal = false })
             }
             Button(onClick = {
 

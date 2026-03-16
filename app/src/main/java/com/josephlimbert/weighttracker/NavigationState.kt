@@ -17,6 +17,7 @@ import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.runtime.serialization.NavKeySerializer
+import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.savedstate.compose.serialization.serializers.MutableStateSerializer
 
 /**

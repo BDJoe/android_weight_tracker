@@ -46,7 +46,6 @@ fun SettingsScreen(modifier: Modifier, onNavigateToSetGoal: () -> Unit, onSignOU
 @Composable
 fun SettingsScreenContent(modifier: Modifier, onNavigateToSetGoal: () -> Unit, onSignOUt: () -> Unit) {
     val scrollState = rememberScrollState()
-    var showSetGoalSheet by remember { mutableStateOf(false) }
 
     Scaffold() { innerPadding ->
         Column(modifier = modifier.fillMaxSize()
@@ -67,11 +66,6 @@ fun SettingsScreenContent(modifier: Modifier, onNavigateToSetGoal: () -> Unit, o
                 Text(text = stringResource(R.string.sign_out))
             }
         }
-
-//        if (showSetGoalSheet) {
-//            SetGoalSheet(onDismiss = { showSetGoalSheet = false }, onSubmit = { weight ->
-//                showSetGoalSheet = false })
-//        }
     }
 }
 
