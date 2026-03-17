@@ -12,9 +12,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
@@ -39,6 +43,8 @@ import com.josephlimbert.weighttracker.ui.auth.Auth
 import com.josephlimbert.weighttracker.ui.auth.AuthScreen
 import com.josephlimbert.weighttracker.ui.theme.WeightTrackerTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 
 private val TOP_LEVEL_ROUTES = mapOf<NavKey, NavBarItem>(
     Home to NavBarItem(iconId = R.drawable.home_icon, description = "Home"),
@@ -58,6 +64,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
+            val isLoggedIn by remember { mutableStateOf(false) }
+            val scope = rememberCoroutineScope()
+            val snackbarHostState = remember { SnackbarHostState() }
             val navigationState = rememberNavigationState(
                 startRoute = Home,
                 topLevelRoutes = (TOP_LEVEL_ROUTES.keys)
@@ -131,11 +140,11 @@ class MainActivity : ComponentActivity() {
                     val modifier = Modifier.padding(contentPadding)
                     val entryProvider = entryProvider {
                         entry<Home>{
-                            HomeScreen(modifier = modifier, onNavigateToAuth = {
+                            HomeScreen(modifier = modifier, navigateToAuth = {
                                 navigator.navigate(Auth)
-                            }, onNavigateToAddWeight = {
+                            }, navigateToAddWeight = {
                                 navigator.navigate(AddWeight())
-                            }, onNavigateToSetGoal = {
+                            }, navigateToSetGoal = {
                                 navigator.navigate(SetGoal)
                             })
                         }
@@ -150,7 +159,10 @@ class MainActivity : ComponentActivity() {
                             }, onSignOUt = { navigator.navigate(Home)})
                         }
                         entry<Auth>(metadata = DialogSceneStrategy.dialog(DialogProperties(windowTitle = "Welcome", usePlatformDefaultWidth = false))){
-                            AuthScreen(openHomeScreen = { navigator.goBack() }, showErrorSnackbar = {})
+                            AuthScreen(openHomeScreen = { navigator.goBack() }, showErrorSnackbar = { errorMessage ->
+                                val message = getErrorMessage(errorMessage)
+                                scope.launch { snackbarHostState.showSnackbar(message) }
+                            })
                         }
                         entry<AddWeight>(metadata = BottomSheetSceneStrategy.bottomSheet()) { key ->
                             AddWeightSheet(onDismiss = { navigator.goBack() }, weightId = key.weightId)

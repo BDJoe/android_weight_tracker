@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -44,8 +45,6 @@ import com.josephlimbert.weighttracker.R
 import com.josephlimbert.weighttracker.data.model.Weight
 import com.josephlimbert.weighttracker.data.utils.formatDateToMediumPatternString
 import com.josephlimbert.weighttracker.ui.shared.LoadingIndicator
-import com.josephlimbert.weighttracker.ui.sheet.AddWeightSheet
-import com.josephlimbert.weighttracker.ui.sheet.SetGoalSheet
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -54,13 +53,13 @@ data object Home : NavKey
 
 @Composable
 fun HomeScreen(modifier: Modifier,
-               onNavigateToAuth: () -> Unit,
-               onNavigateToAddWeight: () -> Unit,
-               onNavigateToSetGoal: () -> Unit,
+               navigateToAuth: () -> Unit,
+               navigateToAddWeight: () -> Unit,
+               navigateToSetGoal: () -> Unit,
                viewModel: HomeViewModel = hiltViewModel()
                ) {
-    val isLoadingUser by viewModel.isLoadingUser.collectAsStateWithLifecycle()
-    val userId by viewModel.userId.collectAsStateWithLifecycle(null)
+    var isLoadingData by remember { mutableStateOf(true) }
+    val userId by viewModel.userId.collectAsStateWithLifecycle("")
     val startingWeight = viewModel.startingWeight.collectAsStateWithLifecycle(null)
     val currentWeight = viewModel.currentWeight.collectAsStateWithLifecycle(null)
     val goalWeight = viewModel.goalWeight.collectAsStateWithLifecycle(null)
@@ -68,8 +67,17 @@ fun HomeScreen(modifier: Modifier,
     val totalLossWeight = viewModel.totalLossWeight.collectAsStateWithLifecycle(null)
     val targetLoss = viewModel.targetLoss.collectAsStateWithLifecycle(null)
     val targetLeft = viewModel.targetLeft.collectAsStateWithLifecycle(null)
-    if (isLoadingUser && userId == null) {
-        LoadingIndicator()
+
+    if (userId == null) {
+        navigateToAuth()
+    } else if (startingWeight.value == null ||
+        currentWeight.value == null ||
+        goalWeight.value == null ||
+        totalLossPercent.value == null ||
+        totalLossWeight.value == null ||
+        targetLoss.value == null ||
+        targetLeft.value == null) {
+        LoadingIndicator(modifier = modifier)
     } else {
         HomeScreenContent(
             startingWeight = startingWeight.value,
@@ -80,14 +88,10 @@ fun HomeScreen(modifier: Modifier,
             targetLoss = targetLoss.value,
             targetLeft = targetLeft.value,
             modifier = modifier,
-            onNavigateToAuth = onNavigateToAuth,
-            onNavigateToAddWeight = onNavigateToAddWeight,
-            onNavigateToSetGoal = onNavigateToSetGoal
+            onNavigateToAuth = navigateToAuth,
+            onNavigateToAddWeight = navigateToAddWeight,
+            onNavigateToSetGoal = navigateToSetGoal
         )
-    }
-
-    LaunchedEffect(true) {
-        viewModel.loadCurrentUser()
     }
 }
 
@@ -300,6 +304,6 @@ fun StatsCard(
 @Preview(showSystemUi = true)
 fun HomeScreenPreview() {
     MaterialTheme() {
-        HomeScreen(modifier = Modifier, onNavigateToAuth = {}, onNavigateToAddWeight = {}, onNavigateToSetGoal = {})
+        HomeScreen(modifier = Modifier, navigateToAuth = {}, navigateToAddWeight = {}, navigateToSetGoal = {})
     }
 }

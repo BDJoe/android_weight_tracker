@@ -97,7 +97,7 @@ fun HistoryScreen(modifier: Modifier, onNavigateToAddWeight: (weightId: String) 
     val userId by viewModel.userId.collectAsStateWithLifecycle(null)
     var weightsGrouped: Map<String, List<ListItem>> by remember { mutableStateOf(emptyMap()) }
     if (userId == null) {
-        LoadingIndicator()
+        LoadingIndicator(modifier = modifier)
     } else {
         HistoryScreenContent(
             modifier = modifier,

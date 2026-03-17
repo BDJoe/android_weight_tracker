@@ -9,21 +9,18 @@ import com.josephlimbert.weighttracker.data.repository.FirestoreRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
-data class AuthUiState(
-    val isLoading: Boolean = false,
-    val user: FirebaseUser? = null,
-    val profile: User? = null,
-    val errorMessage: String? = null,
-    val isAuthenticated: Boolean = false
-)
-
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val authRepository: AuthRepository, private val firestoreRepository: FirestoreRepository
 ) : MainViewModel() {
-    val user = authRepository.currentUserIdFlow
+    val user = authRepository.currentUser
 
     fun signOut() {
         authRepository.signOut()
+        if (user!!.isAnonymous) {
+            launchCatching {
+                firestoreRepository.deleteUserProfile(user.uid)
+            }
+        }
     }
 }

@@ -1,11 +1,17 @@
 package com.josephlimbert.weighttracker
 
 import androidx.navigation3.runtime.NavKey
+import com.josephlimbert.weighttracker.data.repository.AuthRepository
+import com.josephlimbert.weighttracker.ui.auth.Auth
+import javax.inject.Inject
 
 /**
  * Handles navigation events (forward and back) by updating the navigation state.
  */
-class Navigator(val state: NavigationState){
+class Navigator(
+    val state: NavigationState,
+    ){
+
     fun navigate(route: NavKey){
         if (route in state.backStacks.keys){
             // This is a top level route, just switch to it.

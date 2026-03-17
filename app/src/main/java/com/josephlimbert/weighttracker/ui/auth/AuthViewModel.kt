@@ -16,6 +16,8 @@ class AuthViewModel @Inject constructor(private val firestoreRepository: Firesto
     private val _shouldRestartApp = MutableStateFlow(false)
     val shouldRestartApp: StateFlow<Boolean>
         get() = _shouldRestartApp.asStateFlow()
+
+    val userId = authRepository.currentUserIdFlow
     fun signInWithEmail(email: String, password: String, showErrorSnackbar: (ErrorMessage) -> Unit) {
         launchCatching(showErrorSnackbar) {
             authRepository.signInWithEmail(email, password)

@@ -73,17 +73,15 @@ fun AuthScreen(
     showErrorSnackbar: (ErrorMessage) -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
-    val shouldRestartApp by viewModel.shouldRestartApp.collectAsStateWithLifecycle()
+    val userId by viewModel.userId.collectAsStateWithLifecycle(null)
 
-    if (shouldRestartApp) {
+    if (userId != null) {
         openHomeScreen()
     } else {
         AuthScreenContent(
-            onCloseDialog = openHomeScreen,
-            signIn = { _, _, _ ->
-
-            },
+            signIn = viewModel::signInWithEmail,
             signUp = viewModel::signUpWithEmail,
+            signUpGuest = viewModel::createGuestAccount,
             showErrorSnackbar = showErrorSnackbar)
     }
 }
@@ -91,9 +89,9 @@ fun AuthScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthScreenContent(
-    onCloseDialog: () -> Unit,
     signIn: (String, String, (ErrorMessage) -> Unit) -> Unit,
     signUp: (email: String, password: String, name: String, goalWeight: Double, weightUnit: String, (ErrorMessage) -> Unit) -> Unit,
+    signUpGuest: (name: String, goalWeight: Double, weightUnit: String, (ErrorMessage) -> Unit) -> Unit,
     showErrorSnackbar: (ErrorMessage) -> Unit
 ) {
     var currentPage by remember { mutableStateOf(Layout.AUTHENTICATE) }
@@ -103,6 +101,7 @@ fun AuthScreenContent(
     val nameState: TextFieldState = rememberTextFieldState("")
     val goalWeightState: TextFieldState = rememberTextFieldState("")
     val weightUnitState = remember { mutableStateOf(WeightUnit.POUND) }
+    var isGuest by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = { CenterAlignedTopAppBar(
@@ -111,15 +110,8 @@ fun AuthScreenContent(
                 Layout.PROFILE -> Text("Create Profile")
             } },
             navigationIcon = {
-                when (currentPage) {
-                    Layout.AUTHENTICATE -> IconButton(onClick = onCloseDialog) {
-                        Icon (
-                            ImageVector.vectorResource(R.drawable.close_icon),
-                            contentDescription = "close log in screen"
-                        )
-                    }
-
-                    Layout.PROFILE -> IconButton(onClick = { currentPage = Layout.AUTHENTICATE}) {
+                if (currentPage == Layout.PROFILE) {
+                   IconButton(onClick = { currentPage = Layout.AUTHENTICATE}) {
                         Icon(
                             ImageVector.vectorResource(R.drawable.back_arrow_icon),
                             contentDescription = "return to log in"
@@ -149,6 +141,10 @@ fun AuthScreenContent(
                     signIn = { signIn(emailState.text.toString(), passwordState.text.toString(), showErrorSnackbar) },
                     signUp = {
                         currentPage = Layout.PROFILE
+                    },
+                    signUpGuest = {
+                        currentPage = Layout.PROFILE
+                        isGuest = true
                     }
                 )
 
@@ -158,13 +154,23 @@ fun AuthScreenContent(
                     goalWeightState = goalWeightState,
                     weightUnitState = weightUnitState,
                     signUp = {
-                        signUp(
-                            emailState.text.toString(),
-                            passwordState.text.toString(),
-                            nameState.text.toString(),
-                            goalWeightState.text.toString().toDouble(),
-                            weightUnitState.value.value,
-                            showErrorSnackbar)
+                        if (isGuest) {
+                            signUpGuest(
+                                nameState.text.toString(),
+                                goalWeightState.text.toString().toDouble(),
+                                weightUnitState.value.value,
+                                showErrorSnackbar
+                            )
+                        } else {
+                            signUp(
+                                emailState.text.toString(),
+                                passwordState.text.toString(),
+                                nameState.text.toString(),
+                                goalWeightState.text.toString().toDouble(),
+                                weightUnitState.value.value,
+                                showErrorSnackbar
+                            )
+                        }
                     })
             }
         }
@@ -179,11 +185,12 @@ fun Authenticate(
     confirmPasswordState: TextFieldState,
     signIn: () -> Unit,
     signUp: () -> Unit,
+    signUpGuest: () -> Unit
 ) {
     var selectedMethod by remember { mutableStateOf<AuthMethod>(AuthMethod.SIGN_IN) }
     val options = AuthMethod.entries
     val isMatchingPassword = if (selectedMethod == AuthMethod.SIGN_UP && confirmPasswordState.text.isNotEmpty()) {
-        passwordState.text == confirmPasswordState
+        passwordState.text == confirmPasswordState.text
     } else true
     var isSubmitting by remember { mutableStateOf(false) }
 
@@ -257,8 +264,6 @@ fun Authenticate(
             } else if (isMatchingPassword && selectedMethod == AuthMethod.SIGN_UP) {
                 signUp()
             }
-            passwordState.clearText()
-            confirmPasswordState.clearText()
             isSubmitting = false
         }, modifier = Modifier.padding(top = 50.dp), enabled = !isSubmitting) {
             when (selectedMethod) {
@@ -273,9 +278,7 @@ fun Authenticate(
         }
 
         Button(
-            onClick = {
-
-            }, modifier = Modifier.padding(top = 20.dp), enabled = !isSubmitting,
+            onClick = signUpGuest, modifier = Modifier.padding(top = 20.dp), enabled = !isSubmitting,
             colors = ButtonDefaults.filledTonalButtonColors()) {
             Text("Continue as Guest", style = MaterialTheme.typography.titleLarge)
         }
@@ -343,5 +346,5 @@ fun CreateProfile(
 @Composable
 @Preview(showSystemUi = true)
 fun AuthScreenContentPreview() {
-        AuthScreenContent(signIn = {_,_,_ ->}, signUp = {_,_,_,_,_,_->}, onCloseDialog = {}, showErrorSnackbar = {})
+        AuthScreenContent(signIn = {_,_,_ ->}, signUp = {_,_,_,_,_,_->}, signUpGuest = {_,_,_,_ -> }, showErrorSnackbar = {})
 }

@@ -39,7 +39,7 @@ class FirestoreRepository @Inject constructor(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val goalWeight: Flow<Double?>
+    val goalWeight: Flow<Double>
         get() = auth.currentUserIdFlow.flatMapLatest { userId ->
             if (userId != null) {
                 firestore
@@ -48,15 +48,15 @@ class FirestoreRepository @Inject constructor(
                     .snapshots()
                     .map { document ->
                         val user = document.toObject<User>()
-                        user?.goalWeight
+                        user?.goalWeight ?: 0.0
                     }
             } else {
-                emptyFlow<Double>()
+                emptyFlow()
             }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val currentWeight: Flow<Weight?>
+    val currentWeight: Flow<Weight>
         get() = auth.currentUserIdFlow.flatMapLatest { userId ->
             if (userId != null) {
                 firestore
@@ -66,7 +66,10 @@ class FirestoreRepository @Inject constructor(
                     .limit(1)
                     .dataObjects<Weight>()
                     .mapNotNull { snapshot ->
-                        snapshot.firstOrNull()
+                        if (snapshot.isEmpty())
+                            Weight()
+                        else
+                            snapshot.first()
                     }
             } else {
                 emptyFlow()
@@ -75,7 +78,7 @@ class FirestoreRepository @Inject constructor(
 
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val startingWeight: Flow<Weight?>
+    val startingWeight: Flow<Weight>
         get() = auth.currentUserIdFlow.flatMapLatest { userId ->
             if (userId != null) {
                 firestore
@@ -85,7 +88,10 @@ class FirestoreRepository @Inject constructor(
                     .limit(1)
                     .dataObjects<Weight>()
                     .mapNotNull { snapshot ->
-                        snapshot.firstOrNull()
+                        if (snapshot.isEmpty())
+                            Weight()
+                        else
+                            snapshot.first()
                     }
             }
             else {
@@ -127,6 +133,14 @@ class FirestoreRepository @Inject constructor(
             .collection(USER_COLLECTION)
             .document(user.id)
             .set(user)
+            .await()
+    }
+
+    suspend fun deleteUserProfile(userId: String) {
+        firestore
+            .collection(USER_COLLECTION)
+            .document(userId)
+            .delete()
             .await()
     }
 

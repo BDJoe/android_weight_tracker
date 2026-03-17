@@ -1,5 +1,6 @@
 package com.josephlimbert.weighttracker.data.repository
 
+import androidx.compose.runtime.LaunchedEffect
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -13,7 +14,8 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 class AuthRepository @Inject constructor(
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val firestoreRepository: FirestoreRepository
 ) {
     val currentUser: FirebaseUser?
         get() = auth.currentUser

@@ -37,12 +37,7 @@ class HomeViewModel @Inject constructor(
 
     val totalLossPercent: StateFlow<Double> =
         combine(startingWeight, currentWeight, goalWeight) { starting, current, goal ->
-            val result = if (starting != null && current != null && goal != null) {
-                (((starting.weight - current.weight) / (starting.weight - goal)) * 100.0).coerceAtMost(
-                    100.0
-                )
-            } else { 0.0 }
-            return@combine result
+            (((starting.weight - current.weight) / (starting.weight - goal)) * 100.0).coerceIn(0.0, 100.0)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000L),
@@ -51,10 +46,7 @@ class HomeViewModel @Inject constructor(
 
     val totalLossWeight: StateFlow<Double> =
         combine(startingWeight, currentWeight) { starting, current ->
-            val result = if (starting != null && current != null) {
-                starting.weight - current.weight
-            } else { 0.0 }
-            return@combine result
+            (starting.weight - current.weight).coerceAtLeast(0.0)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000L),
@@ -63,10 +55,7 @@ class HomeViewModel @Inject constructor(
 
     val targetLoss: StateFlow<Double> =
         combine(startingWeight, goalWeight) { starting, goal ->
-            val result = if (starting != null && goal != null) {
-                starting.weight - goal
-            } else { 0.0 }
-            return@combine result
+                (starting.weight - goal).coerceAtLeast(0.0)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000L),
@@ -75,26 +64,12 @@ class HomeViewModel @Inject constructor(
 
     val targetLeft: StateFlow<Double> =
         combine(startingWeight, currentWeight, goalWeight) { starting, current, goal ->
-            val result = if (starting != null && current != null && goal != null) {
-                (starting.weight - goal) - (starting.weight - current.weight)
-            } else { 0.0 }
-            return@combine result
+            ((starting.weight - goal) - (starting.weight - current.weight)).coerceAtLeast(0.0)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000L),
             initialValue = 0.0
         )
-
-    fun loadCurrentUser() {
-        launchCatching {
-            if (authRepository.currentUser == null) {
-//                val user = authRepository.createGuestAccount()
-//                firestoreRepository.createUserProfile(user!!)
-            }
-
-            _isLoadingUser.value = false
-        }
-    }
 //    val uiState: StateFlow<UiState>
 //        get() = _uiState.asStateFlow()
 //

@@ -11,8 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun LoadingIndicator() {
-    Box(modifier = Modifier.fillMaxSize()) {
+fun LoadingIndicator(modifier: Modifier = Modifier) {
+    Box(modifier = modifier.fillMaxSize()) {
 
         CircularProgressIndicator(
             modifier = Modifier
