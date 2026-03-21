@@ -61,12 +61,12 @@ data class AddWeight(val weightId: String? = null) : NavKey
 @Composable
 fun AddWeightSheet(onDismiss: () -> Unit, weightId: String? = null, viewModel: AddWeightViewModel = hiltViewModel()) {
     var weight: Weight? by remember { mutableStateOf(null) }
-    val userId = viewModel.userId.collectAsStateWithLifecycle(null)
+    val user = viewModel.user.collectAsStateWithLifecycle(null)
 
     if (weight != null) {
         AddWeightSheetContent(
             onSubmit = { newWeight ->
-                viewModel.addWeight(userId.value!!, newWeight)
+                viewModel.addWeight(user.value!!.uid, newWeight)
                 onDismiss()
             },
             selectedWeight = weight!!

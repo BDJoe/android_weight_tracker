@@ -4,14 +4,21 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -19,16 +26,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.scene.DialogSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import com.josephlimbert.weighttracker.data.model.ErrorMessage
+import com.josephlimbert.weighttracker.data.repository.AuthRepository
 import com.josephlimbert.weighttracker.ui.history.History
 import com.josephlimbert.weighttracker.ui.history.HistoryScreen
 import com.josephlimbert.weighttracker.ui.home.Home
@@ -64,12 +75,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
-            val isLoggedIn by remember { mutableStateOf(false) }
             val scope = rememberCoroutineScope()
             val snackbarHostState = remember { SnackbarHostState() }
             val navigationState = rememberNavigationState(
                 startRoute = Home,
-                topLevelRoutes = (TOP_LEVEL_ROUTES.keys)
+                topLevelRoutes = TOP_LEVEL_ROUTES.keys
             )
             val bottomSheetStrategy = remember { BottomSheetSceneStrategy<NavKey>() }
             val dialogStrategy = remember { DialogSceneStrategy<NavKey>() }
@@ -81,31 +91,12 @@ class MainActivity : ComponentActivity() {
                     topBar = {
                         CenterAlignedTopAppBar(
                             title = {
-                                if  (navigationState.backStacks[navigationState.topLevelRoute]?.last() == Auth) {
-                                    Text(
-                                        "Weight Tracker",
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                } else {
-                                    Text(
-                                        TOP_LEVEL_ROUTES[navigationState.topLevelRoute]?.description ?: "Weight Tracker",
+                                Text(
+                                    TOP_LEVEL_ROUTES[navigationState.topLevelRoute]?.description ?: "Weight Tracker",
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
-                                    )
-                                }
+                                )
                             },
-//                            navigationIcon = {
-//                                // Show the back button if not on the start destination
-//                                if (navigationState.backStacks[navigationState.topLevelRoute]?.last() == Auth) {
-//                                    IconButton(onClick = { navigator.goBack() }) {
-//                                        Icon(
-//                                            painter = painterResource(R.drawable.back_arrow_icon),
-//                                            contentDescription = "Back"
-//                                        )
-//                                    }
-//                                }
-//                            },
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                             ),
@@ -135,13 +126,14 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         }
-                    }
+                    },
+                    snackbarHost = { AppSnackbarHost(snackbarHostState = snackbarHostState) }
                 ) { contentPadding ->
                     val modifier = Modifier.padding(contentPadding)
                     val entryProvider = entryProvider {
                         entry<Home>{
                             HomeScreen(modifier = modifier, navigateToAuth = {
-                                navigator.navigate(Auth)
+                                navigator.navigate(Auth(false))
                             }, navigateToAddWeight = {
                                 navigator.navigate(AddWeight())
                             }, navigateToSetGoal = {
@@ -149,20 +141,29 @@ class MainActivity : ComponentActivity() {
                             })
                         }
                         entry<History>{
-                            HistoryScreen(modifier = modifier, onNavigateToAddWeight = { weightId ->
+                            HistoryScreen(modifier = modifier, navigateToAuth = { navigator.navigate(Auth(false)) }, onNavigateToAddWeight = { weightId ->
                                 navigator.navigate(AddWeight(weightId))
                             })
                         }
                         entry<Settings>{
-                            SettingsScreen(modifier = modifier, onNavigateToSetGoal = {
+                            SettingsScreen(
+                                modifier = modifier,
+                                onNavigateToAuth = { navigator.navigate(Auth(true))},
+                                onNavigateToSetGoal = {
                                 navigator.navigate(SetGoal)
                             }, onSignOUt = { navigator.navigate(Home)})
                         }
-                        entry<Auth>(metadata = DialogSceneStrategy.dialog(DialogProperties(windowTitle = "Welcome", usePlatformDefaultWidth = false))){
-                            AuthScreen(openHomeScreen = { navigator.goBack() }, showErrorSnackbar = { errorMessage ->
-                                val message = getErrorMessage(errorMessage)
-                                scope.launch { snackbarHostState.showSnackbar(message) }
-                            })
+                        entry<Auth>(metadata = DialogSceneStrategy.dialog(DialogProperties(windowTitle = "Welcome", usePlatformDefaultWidth = false))){ key ->
+                            AuthScreen(
+                                openHomeScreen = {
+                                    navigator.goBack()
+                                    navigator.navigate(Home) },
+                                showErrorSnackbar = { errorMessage ->
+                                    scope.launch { snackbarHostState.showSnackbar(errorMessage) }
+                                },
+                                closeAuth = {navigator.goBack()},
+                                isGuest = key.isGuest
+                                )
                         }
                         entry<AddWeight>(metadata = BottomSheetSceneStrategy.bottomSheet()) { key ->
                             AddWeightSheet(onDismiss = { navigator.goBack() }, weightId = key.weightId)

@@ -6,6 +6,5 @@ data class User(
     val id: String = "",
     val email: String = "",
     val goalWeight: Double = 0.0,
-    val name: String = "",
-    val weightUnit: String = ""
+    val weightUnit: String = "lbs"
 )

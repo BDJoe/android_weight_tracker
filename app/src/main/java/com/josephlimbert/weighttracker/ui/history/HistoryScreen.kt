@@ -1,6 +1,5 @@
 package com.josephlimbert.weighttracker.ui.history
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,10 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,15 +50,11 @@ import com.josephlimbert.weighttracker.data.model.Weight
 import com.josephlimbert.weighttracker.data.utils.formatDateToDayOfMonthString
 import com.josephlimbert.weighttracker.data.utils.formatDateToDayOfWeekString
 import com.josephlimbert.weighttracker.data.utils.formatDateToMonthYearString
-import com.josephlimbert.weighttracker.ui.shared.LoadingIndicator
-import com.josephlimbert.weighttracker.ui.sheet.AddWeightSheet
-import com.josephlimbert.weighttracker.ui.theme.ExtendedColorScheme
 import com.josephlimbert.weighttracker.ui.theme.extendedLight
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
@@ -69,18 +63,10 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.Insets
 import com.patrykandpatrick.vico.compose.common.Position
-import com.patrykandpatrick.vico.compose.common.component.TextComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
-import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 import kotlinx.serialization.Serializable
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Serializable
 data object History : NavKey
@@ -91,13 +77,19 @@ private data class ListItem(
 )
 
 @Composable
-fun HistoryScreen(modifier: Modifier, onNavigateToAddWeight: (weightId: String) -> Unit, viewModel: HistoryViewModel = hiltViewModel()) {
+fun HistoryScreen(
+    modifier: Modifier,
+    navigateToAuth: () -> Unit,
+    onNavigateToAddWeight: (weightId: String?) -> Unit,
+    viewModel: HistoryViewModel = hiltViewModel()) {
     val weights = viewModel.weights.collectAsStateWithLifecycle(emptyList())
     val goalWeight = viewModel.goalWeight.collectAsStateWithLifecycle(null)
-    val userId by viewModel.userId.collectAsStateWithLifecycle(null)
+    val user by viewModel.user.collectAsStateWithLifecycle("")
+    val weightUnit = viewModel.weightUnit.collectAsStateWithLifecycle(null)
     var weightsGrouped: Map<String, List<ListItem>> by remember { mutableStateOf(emptyMap()) }
-    if (userId == null) {
-        LoadingIndicator(modifier = modifier)
+
+    if (user == null) {
+        navigateToAuth()
     } else {
         HistoryScreenContent(
             modifier = modifier,
@@ -105,6 +97,7 @@ fun HistoryScreen(modifier: Modifier, onNavigateToAddWeight: (weightId: String) 
             weightsGrouped,
             weights.value,
             goalWeight.value,
+            weightUnit = weightUnit.value,
             viewModel::deleteWeight
         )
     }
@@ -127,10 +120,11 @@ fun HistoryScreen(modifier: Modifier, onNavigateToAddWeight: (weightId: String) 
 @Composable
 private fun HistoryScreenContent(
     modifier: Modifier,
-    onNavigateToAddWeight: (weightId: String) -> Unit,
+    onNavigateToAddWeight: (weightId: String?) -> Unit,
     weightsGrouped: Map<String, List<ListItem>>,
     weights: List<Weight>,
     goalWeight: Double?,
+    weightUnit: String?,
     deleteWeight: (weightId: String) -> Unit,
 ) {
     var openDeleteDialog by remember {mutableStateOf(false)}
@@ -145,33 +139,45 @@ private fun HistoryScreenContent(
                 start = 4.dp,
                 end = 4.dp
             )) {
-            if (weights.isNotEmpty()) HistoryChart(weights, goalWeight)
+            if (weights.isEmpty()) {
+                NoData(onAddWeight = { onNavigateToAddWeight(null) })
+            } else {
+                HistoryChart(weights, goalWeight)
 
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                weightsGrouped.forEach  { (month, listItems) ->
-                    stickyHeader(key = month) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = month,
-                                style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier
-                                    .padding(start = 8.dp, end = 10.dp, top = 8.dp, bottom = 8.dp)
-                            )
-                            HorizontalDivider()
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    weightsGrouped.forEach { (month, listItems) ->
+                        stickyHeader(key = month) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = month,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    modifier = Modifier
+                                        .padding(
+                                            start = 8.dp,
+                                            end = 10.dp,
+                                            top = 8.dp,
+                                            bottom = 8.dp
+                                        )
+                                )
+                                HorizontalDivider()
+                            }
                         }
-                    }
 
-                    items(items = listItems, key = { listItem -> listItem.weight.id }) { listItem ->
-                        ListItem(listItem,
-                            onEdit = { onNavigateToAddWeight(listItem.weight.id) },
-                            onDelete = {weightId ->
-                                openDeleteDialog = true
-                                selectedWeightId = weightId
-                            })
+                        items(
+                            items = listItems,
+                            key = { listItem -> listItem.weight.id }) { listItem ->
+                            HistoryListItem(
+                                listItem,
+                                weightUnit = weightUnit,
+                                onEdit = { onNavigateToAddWeight(listItem.weight.id) },
+                                onDelete = { weightId ->
+                                    openDeleteDialog = true
+                                    selectedWeightId = weightId
+                                })
+                        }
                     }
                 }
             }
-        }
 //        if (showBottomSheet) {
 //            AddWeightSheet(
 //                onDismiss = { showBottomSheet = false },
@@ -182,26 +188,27 @@ private fun HistoryScreenContent(
 //            )
 //        }
 
-        if (openDeleteDialog){
-            ConfirmDeleteDialog(
-                onDismissRequest = {
-                    openDeleteDialog = false
-                    selectedWeightId = ""
-                },
-                onConfirmation = {
-                    deleteWeight(selectedWeightId)
-                    openDeleteDialog = false
-                    selectedWeightId = ""
-                })
+            if (openDeleteDialog) {
+                ConfirmDeleteDialog(
+                    onDismissRequest = {
+                        openDeleteDialog = false
+                        selectedWeightId = ""
+                    },
+                    onConfirmation = {
+                        deleteWeight(selectedWeightId)
+                        openDeleteDialog = false
+                        selectedWeightId = ""
+                    })
+            }
         }
     }
 }
 
 @Composable
-private fun ListItem(listItem: ListItem, onEdit: () -> Unit, onDelete: (weightId: String) -> Unit) {
+private fun HistoryListItem(listItem: ListItem, weightUnit: String?, onEdit: () -> Unit, onDelete: (weightId: String) -> Unit) {
     val formattedDayOfWeekText = formatDateToDayOfWeekString(listItem.weight.recordedDate.toDate())
     val formattedDayText = formatDateToDayOfMonthString(listItem.weight.recordedDate.toDate())
-    val formattedWeightText = listItem.weight.weight.toString() + " lbs"
+    val formattedWeightText = listItem.weight.weight.toString() + " " + weightUnit
 
     val weightDiff = when {
         (listItem.weightDiff > 0) -> "+" + listItem.weightDiff
@@ -240,7 +247,7 @@ private fun ListItem(listItem: ListItem, onEdit: () -> Unit, onDelete: (weightId
                     color = iconTint,
                     modifier = Modifier.padding(start = 5.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    DropdownMenu(modifier = Modifier.padding(end = 10.dp), onEdit = onEdit, onDelete = { onDelete(listItem.weight.id) })
+                    HistoryItemDropdownMenu(modifier = Modifier.padding(end = 10.dp), onEdit = onEdit, onDelete = { onDelete(listItem.weight.id) })
                 }
 
             }
@@ -249,7 +256,7 @@ private fun ListItem(listItem: ListItem, onEdit: () -> Unit, onDelete: (weightId
 }
 
 @Composable
-fun DropdownMenu(modifier: Modifier, onEdit: () -> Unit, onDelete: () -> Unit) {
+fun HistoryItemDropdownMenu(modifier: Modifier, onEdit: () -> Unit, onDelete: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
@@ -356,7 +363,29 @@ private fun rememberHorizontalLine(goalWeight: Double): HorizontalLine {
 }
 
 @Composable
+fun NoData(onAddWeight: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center) {
+        Text("Nothing to show", style = MaterialTheme.typography.titleLarge)
+        Button(onClick = onAddWeight, modifier = Modifier.padding(top = 20.dp)) {
+            Text("Start Tracking", style = MaterialTheme.typography.titleLarge)
+        }
+    }
+}
+
+@Composable
+
 @Preview(showSystemUi = false)
 fun HistoryScreenPreview() {
-    HistoryScreen(modifier = Modifier, onNavigateToAddWeight = {})
+    HistoryScreenContent(
+        modifier = Modifier,
+        onNavigateToAddWeight = { },
+        weightsGrouped = emptyMap(),
+        weights = emptyList(),
+        goalWeight = 1.0,
+        weightUnit = "lbs",
+        deleteWeight = {},
+    )
 }

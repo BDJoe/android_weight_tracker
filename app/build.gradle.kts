@@ -48,10 +48,9 @@ dependencies {
     implementation(libs.ui)
     implementation(libs.ui.graphics)
     implementation(libs.material3.adaptive.navigation.suite)
-    implementation(libs.androidx.material3)
     implementation(libs.androidx.animation)
     // Add compose support
-    val composeBom = platform("androidx.compose:compose-bom:2026.02.01")
+    val composeBom = platform("androidx.compose:compose-bom-alpha:2026.03.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
     // Material Design 3

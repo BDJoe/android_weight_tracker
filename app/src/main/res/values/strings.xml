@@ -3,7 +3,7 @@
     <string name="empty_weight_error">Weight cannot be empty!</string>
     <string name="weight_number_error">Weight must be a number!</string>
     <string name="select_date">Select Date</string>
-    <string name="login_description">Enter an email and password to log in or create a new account</string>
+    <string name="login_description">Enter an email and password to sign in or create a new account</string>
     <string name="email_hint">Email</string>
     <string name="password_hint">Password</string>
     <string name="submit">Submit</string>

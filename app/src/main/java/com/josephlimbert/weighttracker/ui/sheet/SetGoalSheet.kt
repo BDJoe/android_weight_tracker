@@ -32,14 +32,14 @@ import kotlinx.serialization.Serializable
 data object SetGoal: NavKey
 @Composable
 fun SetGoalSheet(onDismiss: () -> Unit, goalWeight: Double? = null, viewModel: SetGoalViewModel = hiltViewModel()) {
-    val userId = viewModel.userId.collectAsStateWithLifecycle(null)
+    val user = viewModel.user.collectAsStateWithLifecycle(null)
     val goalWeight = viewModel.goalWeight.collectAsStateWithLifecycle(null)
 
     if (goalWeight.value == null) {
         LoadingIndicator()
     } else {
         SetGoalContent(onSubmit = { weight ->
-            viewModel.setGoalWeight(userId.value!!, weight.toDouble())
+            viewModel.setGoalWeight(user.value!!.uid, weight.toDouble())
             onDismiss()
         }, goalWeight = goalWeight.value)
     }

@@ -22,7 +22,6 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,7 +29,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -58,8 +56,7 @@ fun HomeScreen(modifier: Modifier,
                navigateToSetGoal: () -> Unit,
                viewModel: HomeViewModel = hiltViewModel()
                ) {
-    var isLoadingData by remember { mutableStateOf(true) }
-    val userId by viewModel.userId.collectAsStateWithLifecycle("")
+    val user by viewModel.user.collectAsStateWithLifecycle("")
     val startingWeight = viewModel.startingWeight.collectAsStateWithLifecycle(null)
     val currentWeight = viewModel.currentWeight.collectAsStateWithLifecycle(null)
     val goalWeight = viewModel.goalWeight.collectAsStateWithLifecycle(null)
@@ -67,8 +64,9 @@ fun HomeScreen(modifier: Modifier,
     val totalLossWeight = viewModel.totalLossWeight.collectAsStateWithLifecycle(null)
     val targetLoss = viewModel.targetLoss.collectAsStateWithLifecycle(null)
     val targetLeft = viewModel.targetLeft.collectAsStateWithLifecycle(null)
+    val weightUnit = viewModel.weightUnit.collectAsStateWithLifecycle(null)
 
-    if (userId == null) {
+    if (user == null) {
         navigateToAuth()
     } else if (startingWeight.value == null ||
         currentWeight.value == null ||
@@ -76,7 +74,8 @@ fun HomeScreen(modifier: Modifier,
         totalLossPercent.value == null ||
         totalLossWeight.value == null ||
         targetLoss.value == null ||
-        targetLeft.value == null) {
+        targetLeft.value == null ||
+        weightUnit.value == null) {
         LoadingIndicator(modifier = modifier)
     } else {
         HomeScreenContent(
@@ -87,8 +86,8 @@ fun HomeScreen(modifier: Modifier,
             totalLossWeight = totalLossWeight.value,
             targetLoss = targetLoss.value,
             targetLeft = targetLeft.value,
+            weightUnit = weightUnit.value,
             modifier = modifier,
-            onNavigateToAuth = navigateToAuth,
             onNavigateToAddWeight = navigateToAddWeight,
             onNavigateToSetGoal = navigateToSetGoal
         )
@@ -105,14 +104,12 @@ fun HomeScreenContent(
     totalLossWeight: Double?,
     targetLoss: Double?,
     targetLeft: Double?,
+    weightUnit: String?,
     modifier: Modifier,
-    onNavigateToAuth: () -> Unit,
     onNavigateToAddWeight: () -> Unit,
     onNavigateToSetGoal: () -> Unit
 ) {
     val scrollState = rememberScrollState()
-    var showAddWeightSheet by remember { mutableStateOf(false) }
-    var showSetGoalSheet by remember { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
@@ -138,17 +135,16 @@ fun HomeScreenContent(
                 currentWeight = currentWeight,
                 goalWeight = goalWeight,
                 totalLossPercent = totalLossPercent,
-                onClick = onNavigateToSetGoal
+                weightUnit = weightUnit,
+                onSetGoalWeight = onNavigateToSetGoal
             )
             StatsCard(
                 totalLossWeight = totalLossWeight,
                 targetLoss = targetLoss,
                 targetLeft = targetLeft,
                 startingWeight = startingWeight,
+                weightUnit = weightUnit,
             )
-            Button(onClick = onNavigateToAuth) {
-                Text(text = "Sign In")
-            }
         }
 
 //        if (showAddWeightSheet) {
@@ -172,7 +168,8 @@ fun CurrentWeightCard(
     currentWeight: Weight?,
     goalWeight: Double?,
     totalLossPercent: Double?,
-    onClick: () -> Unit
+    weightUnit: String?,
+    onSetGoalWeight: () -> Unit
 ) {
     OutlinedCard(
         modifier = Modifier
@@ -193,7 +190,7 @@ fun CurrentWeightCard(
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
-                    Text(startingWeight?.weight.toString() + " lbs", style = MaterialTheme.typography.titleMedium)
+                    Text(startingWeight?.weight.toString() + " " + weightUnit, style = MaterialTheme.typography.titleMedium)
                 }
 
                 Box() {
@@ -221,7 +218,7 @@ fun CurrentWeightCard(
                             style = MaterialTheme.typography.headlineSmall
                         )
                         Text(
-                            text = currentWeight?.weight.toString() + " lbs",
+                            text = currentWeight?.weight.toString() + " " + weightUnit,
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.W500
                         )
@@ -236,12 +233,12 @@ fun CurrentWeightCard(
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
-                    Text(goalWeight?.toString() + " lbs", style = MaterialTheme.typography.titleMedium)
+                    Text(goalWeight?.toString() + " " + weightUnit, style = MaterialTheme.typography.titleMedium)
                 }
             }
             if (goalWeight == null || goalWeight <= 0) {
                 Button(
-                    onClick = onClick,
+                    onClick = onSetGoalWeight,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 10.dp, horizontal = 20.dp)
@@ -262,6 +259,7 @@ fun StatsCard(
     totalLossWeight: Double?,
     targetLoss: Double?,
     targetLeft: Double?,
+    weightUnit: String?,
     startingWeight: Weight?,
 ) {
     val formattedDate = if (startingWeight != null) formatDateToMediumPatternString(startingWeight.recordedDate.toDate()) else "N/A"
@@ -282,15 +280,15 @@ fun StatsCard(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(text = stringResource(R.string.target_loss), style = MaterialTheme.typography.bodyLarge)
-                    Text(text = targetLoss?.toString() + " lbs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W500)
+                    Text(text = targetLoss?.toString() + " " + weightUnit, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W500)
                     Spacer(modifier = Modifier.size(10.dp))
                     Text(text = stringResource(R.string.remaining), style = MaterialTheme.typography.bodyLarge)
-                    Text(text = targetLeft?.toString() + " lbs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W500)
+                    Text(text = targetLeft?.toString() + " " + weightUnit, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W500)
                 }
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(text = stringResource(R.string.lost_so_far), style = MaterialTheme.typography.bodyLarge)
-                    Text(text = totalLossWeight?.toString() + " lbs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W500)
+                    Text(text = totalLossWeight?.toString() + " " + weightUnit, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W500)
                     Spacer(modifier = Modifier.size(10.dp))
                     Text(text = stringResource(R.string.start_date), style = MaterialTheme.typography.bodyLarge)
                     Text(text = formattedDate, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.W500)

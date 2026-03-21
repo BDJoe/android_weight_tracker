@@ -30,21 +30,25 @@ class FirestoreRepository @Inject constructor(
     ///////////////////////////////////////
     @OptIn(ExperimentalCoroutinesApi::class)
     val weightList: Flow<List<Weight>>
-        get() = auth.currentUserIdFlow.flatMapLatest { userId ->
-        firestore
-            .collection(WEIGHT_ITEMS_COLLECTION)
-            .whereEqualTo(USER_ID_FIELD, userId)
-            .orderBy("recordedDate", Query.Direction.DESCENDING)
-            .dataObjects<Weight>()
+        get() = auth.currentUser.flatMapLatest { user ->
+            if (user != null) {
+                firestore
+                    .collection(WEIGHT_ITEMS_COLLECTION)
+                    .whereEqualTo(USER_ID_FIELD, user.uid)
+                    .orderBy("recordedDate", Query.Direction.DESCENDING)
+                    .dataObjects<Weight>()
+            } else {
+                emptyFlow()
+            }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val goalWeight: Flow<Double>
-        get() = auth.currentUserIdFlow.flatMapLatest { userId ->
-            if (userId != null) {
+        get() = auth.currentUser.flatMapLatest { user ->
+            if (user != null) {
                 firestore
                     .collection(USER_COLLECTION)
-                    .document(userId)
+                    .document(user.uid)
                     .snapshots()
                     .map { document ->
                         val user = document.toObject<User>()
@@ -57,11 +61,11 @@ class FirestoreRepository @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val currentWeight: Flow<Weight>
-        get() = auth.currentUserIdFlow.flatMapLatest { userId ->
-            if (userId != null) {
+        get() = auth.currentUser.flatMapLatest { user ->
+            if (user != null) {
                 firestore
                     .collection(WEIGHT_ITEMS_COLLECTION)
-                    .whereEqualTo(USER_ID_FIELD, userId)
+                    .whereEqualTo(USER_ID_FIELD, user.uid)
                     .orderBy("recordedDate", Query.Direction.DESCENDING)
                     .limit(1)
                     .dataObjects<Weight>()
@@ -79,11 +83,11 @@ class FirestoreRepository @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val startingWeight: Flow<Weight>
-        get() = auth.currentUserIdFlow.flatMapLatest { userId ->
-            if (userId != null) {
+        get() = auth.currentUser.flatMapLatest { user ->
+            if (user != null) {
                 firestore
                     .collection(WEIGHT_ITEMS_COLLECTION)
-                    .whereEqualTo(USER_ID_FIELD, userId)
+                    .whereEqualTo(USER_ID_FIELD, user.uid)
                     .orderBy("recordedDate", Query.Direction.ASCENDING)
                     .limit(1)
                     .dataObjects<Weight>()
@@ -128,6 +132,39 @@ class FirestoreRepository @Inject constructor(
     // User Profile
     ///////////////////////////////////////
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val weightUnit: Flow<String>
+        get() = auth.currentUser.flatMapLatest { user ->
+            if (user != null) {
+                firestore
+                    .collection(USER_COLLECTION)
+                    .document(user.uid)
+                    .snapshots()
+                    .map { document ->
+                        val user = document.toObject<User>()
+                        user?.weightUnit ?: "lbs"
+                    }
+            } else {
+                emptyFlow()
+            }
+        }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val userProfile: Flow<User?>
+        get() = auth.currentUser.flatMapLatest { user ->
+            if (user != null) {
+                firestore
+                    .collection(USER_COLLECTION)
+                    .document(user.uid)
+                    .snapshots()
+                    .map { document ->
+                        document.toObject<User>()
+                    }
+            } else {
+                emptyFlow()
+            }
+        }
+
     suspend fun createUserProfile(user: User) {
         firestore
             .collection(USER_COLLECTION)
@@ -159,6 +196,14 @@ class FirestoreRepository @Inject constructor(
                 .update("goalWeight", weight)
                 .await()
     }
+    suspend fun setWeightUnit(userId: String, unit: String) {
+        firestore
+            .collection(USER_COLLECTION)
+            .document(userId)
+            .update("weightUnit", unit)
+            .await()
+    }
+
 
     companion object {
         private const val WEIGHT_ITEMS_COLLECTION = "weights"

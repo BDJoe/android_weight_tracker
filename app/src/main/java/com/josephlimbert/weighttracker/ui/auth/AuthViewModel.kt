@@ -1,43 +1,86 @@
 package com.josephlimbert.weighttracker.ui.auth
 
-import com.josephlimbert.weighttracker.MainViewModel
+import android.util.Log
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.josephlimbert.weighttracker.data.model.ErrorMessage
 import com.josephlimbert.weighttracker.data.model.User
 import com.josephlimbert.weighttracker.data.repository.AuthRepository
+import com.josephlimbert.weighttracker.data.repository.AuthResult
 import com.josephlimbert.weighttracker.data.repository.FirestoreRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class AuthViewModel @Inject constructor(private val firestoreRepository: FirestoreRepository, private val authRepository: AuthRepository): MainViewModel() {
-    private val _shouldRestartApp = MutableStateFlow(false)
-    val shouldRestartApp: StateFlow<Boolean>
-        get() = _shouldRestartApp.asStateFlow()
+class AuthViewModel @Inject constructor(private val firestoreRepository: FirestoreRepository, private val authRepository: AuthRepository): ViewModel() {
+    val user = authRepository.currentUser
 
-    val userId = authRepository.currentUserIdFlow
-    fun signInWithEmail(email: String, password: String, showErrorSnackbar: (ErrorMessage) -> Unit) {
-        launchCatching(showErrorSnackbar) {
-            authRepository.signInWithEmail(email, password)
-            _shouldRestartApp.value = true
+    fun signInWithEmail(email: String, password: String, showErrorSnackbar: (String) -> Unit, navigateHome: () -> Unit) {
+        viewModelScope.launch {
+            when (val result = authRepository.signInWithEmail(email, password)) {
+                is AuthResult.Success -> {
+                    navigateHome()
+                }
+                is AuthResult.Error -> {
+                    showErrorSnackbar(result.message)
+                }
+                is AuthResult.Loading -> {
+
+                }
+            }
         }
     }
 
-    fun signUpWithEmail(email: String, password: String, name: String, goalWeight: Double, weightUnit: String, showErrorSnackbar: (ErrorMessage) -> Unit) {
-        launchCatching(showErrorSnackbar) {
-            val userId = authRepository.signUpWithEmail(email, password)
-            firestoreRepository.createUserProfile(User(id = userId!!, email = email, goalWeight = goalWeight, name = name, weightUnit = weightUnit))
-            _shouldRestartApp.value = true
+    fun signUpWithEmail(email: String, password: String, showErrorSnackbar: (String) -> Unit, navigateHome: () -> Unit) {
+        viewModelScope.launch {
+            when (val result = authRepository.signUpWithEmail(email, password)) {
+                is AuthResult.Success -> {
+                    firestoreRepository.createUserProfile(User(id = result.data.uid, email = email))
+                    navigateHome()
+                }
+                is AuthResult.Error -> {
+                    showErrorSnackbar(result.message)
+                }
+                is AuthResult.Loading -> {
+
+                }
+            }
         }
     }
 
-    fun createGuestAccount(name: String, goalWeight: Double, weightUnit: String, showErrorSnackbar: (ErrorMessage) -> Unit) {
-        launchCatching {
-            val userId = authRepository.createGuestAccount()
-            firestoreRepository.createUserProfile(User(id = userId!!, email = "", goalWeight = goalWeight, name = name, weightUnit = weightUnit))
-            _shouldRestartApp.value = true
+    fun linkAccount(email: String, password: String, showErrorSnackbar: (String) -> Unit, navigateHome: () -> Unit) {
+        viewModelScope.launch {
+            when (val result = authRepository.linkAccount(email, password)) {
+                is AuthResult.Success -> {
+                    firestoreRepository.linkUserProfile(result.data)
+                    navigateHome()
+                }
+                is AuthResult.Error -> {
+                    showErrorSnackbar(result.message)
+                }
+                is AuthResult.Loading -> {}
+            }
+        }
+    }
+
+    fun createGuestAccount(showErrorSnackbar: (String) -> Unit, navigateHome: () -> Unit) {
+        viewModelScope.launch {
+            when (val result = authRepository.createGuestAccount()) {
+                is AuthResult.Success -> {
+                    firestoreRepository.createUserProfile(User(id = result.data.uid))
+                    navigateHome()
+                }
+                is AuthResult.Error -> {
+                    showErrorSnackbar(result.message)
+                }
+                is AuthResult.Loading -> {
+
+                }
+            }
         }
     }
 }
