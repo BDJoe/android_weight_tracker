@@ -81,6 +81,18 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    suspend fun changePassword(oldPass: String, newPass: String): AuthResult<Unit> {
+        return try {
+            val user = auth.currentUser
+            val credential = EmailAuthProvider.getCredential(user!!.email!!, oldPass)
+            user.reauthenticate(credential).await()
+            user.updatePassword(newPass).await()
+            AuthResult.Success(Unit)
+        } catch (e: Exception) {
+            AuthResult.Error(e, e.message ?: "Unknown Error Occurred")
+        }
+    }
+
     fun signOut() {
         if (auth.currentUser!!.isAnonymous) {
             auth.currentUser!!.delete()

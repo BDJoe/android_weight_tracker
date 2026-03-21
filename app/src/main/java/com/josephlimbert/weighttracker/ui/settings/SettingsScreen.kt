@@ -13,9 +13,12 @@ import androidx.compose.foundation.layout.tappableElement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedButton
@@ -28,8 +31,10 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SecureTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
@@ -47,6 +52,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
@@ -94,8 +100,9 @@ fun SettingsScreen(
                 }
                 onSignOUt()
             },
-            onLinkAccount = onNavigateToAuth
-            )
+            onLinkAccount = onNavigateToAuth,
+            onChangePassword = viewModel::changePassword
+        )
     }
 }
 
@@ -109,75 +116,88 @@ fun SettingsScreenContent(
     onChangeWeightUnit: (weightUnit: String) -> Unit,
     onNavigateToSetGoal: () -> Unit,
     onSignOut: () -> Unit,
-    onLinkAccount: () -> Unit) {
-    val scrollState = rememberScrollState()
+    onLinkAccount: () -> Unit,
+    onChangePassword: (String, String) -> Unit
+) {
+
+    var showDialog by remember { mutableStateOf(false) }
 
     Scaffold() { innerPadding ->
-        LazyColumn(modifier = modifier
-            .fillMaxSize()
-            .padding(
-                top = innerPadding.calculateTopPadding() + 10.dp,
-                start = 10.dp,
-                end = 10.dp,
-                bottom = 10.dp
-            ),
+        LazyColumn(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(
+                    top = innerPadding.calculateTopPadding() + 10.dp,
+                    start = 10.dp,
+                    end = 10.dp,
+                    bottom = 10.dp
+                ),
             horizontalAlignment = Alignment.Start,
             verticalArrangement = Arrangement.Top
-            ) {
-
-                if (user?.isAnonymous == true) {
-                    item() {
-                        ListItem(
-                            onClick = onLinkAccount,
-                            content = {
-                                Text(
-                                    "Create Account",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                            },
-                            supportingContent = { Text("Register to sync data across devices") },
-                            trailingContent = {
-                                Icon(
-                                    ImageVector.vectorResource(R.drawable.chevron_right_icon),
-                                    contentDescription = "create account"
-                                )
-                            }
-                        )
-                    }
-                } else {
-                    item {
-                        ListItem(
-                            headlineContent = {
-                                Text(
-                                    "Profile",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                            },
-                            supportingContent = { Text(userProfile.email) },
-                            trailingContent = {
-                                ProfileDropdownMenu(
-                                    modifier = Modifier,
-                                    onChangePassword = {},
-                                    onSignOut = onSignOut)
-                            }
-                        )
-                        HorizontalDivider()
-                    }
+        ) {
+            if (user?.isAnonymous == true) {
+                item() {
+                    ListItem(
+                        onClick = onLinkAccount,
+                        content = {
+                            Text(
+                                "Create Account",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        },
+                        supportingContent = { Text("Register to sync data across devices") },
+                        trailingContent = {
+                            Icon(
+                                ImageVector.vectorResource(R.drawable.chevron_right_icon),
+                                contentDescription = "create account"
+                            )
+                        }
+                    )
                 }
+            } else {
+                item {
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                "Profile",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        },
+                        supportingContent = { Text(userProfile.email) },
+                        trailingContent = {
+                            ProfileDropdownMenu(
+                                modifier = Modifier,
+                                onChangePassword = { showDialog = true },
+                                onSignOut = onSignOut
+                            )
+                        }
+                    )
+                    HorizontalDivider()
+                }
+            }
 
             item {
                 ListItem(
-                    headlineContent = { Text("Goal Weight", style = MaterialTheme.typography.titleMedium) },
-                    supportingContent = { Text(userProfile.goalWeight.toString() + " " + weightUnit)},
-                    trailingContent = { IconButton(
-                        onClick = onNavigateToSetGoal,
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                    ) {
-                        Icon(
-                            ImageVector.vectorResource(R.drawable.edit_icon),
-                            contentDescription = "change goal weight")
-                    } }
+                    headlineContent = {
+                        Text(
+                            "Goal Weight",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    },
+                    supportingContent = { Text(userProfile.goalWeight.toString() + " " + weightUnit) },
+                    trailingContent = {
+                        IconButton(
+                            onClick = onNavigateToSetGoal,
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            )
+                        ) {
+                            Icon(
+                                ImageVector.vectorResource(R.drawable.edit_icon),
+                                contentDescription = "change goal weight"
+                            )
+                        }
+                    }
                 )
                 HorizontalDivider()
             }
@@ -186,7 +206,8 @@ fun SettingsScreenContent(
                 Text(
                     "Weight Unit",
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(ListItemDefaults.ContentPadding))
+                    modifier = Modifier.padding(ListItemDefaults.ContentPadding)
+                )
 
                 WeightUnit.entries.forEach { unit ->
                     Row(
@@ -196,7 +217,8 @@ fun SettingsScreenContent(
                                 selected = unit.value == weightUnit,
                                 onClick = { onChangeWeightUnit(unit.value) },
                                 role = Role.RadioButton
-                            ).padding(ListItemDefaults.ContentPadding)
+                            )
+                            .padding(ListItemDefaults.ContentPadding)
                     ) {
                         RadioButton(selected = unit.value == weightUnit, onClick = null)
                         Text(unit.label, modifier = Modifier.padding(start = 16.dp))
@@ -204,6 +226,14 @@ fun SettingsScreenContent(
                 }
                 HorizontalDivider()
             }
+        }
+        if (showDialog) {
+            ChangePasswordDialog(
+                onDismissRequest = { showDialog = false },
+                onConfirmation = { oldPass, newPass ->
+                    onChangePassword(oldPass, newPass)
+                    showDialog = false
+                })
         }
     }
 }
@@ -214,7 +244,7 @@ fun ProfileDropdownMenu(modifier: Modifier, onChangePassword: () -> Unit, onSign
 
     Box(modifier = modifier) {
         IconButton(
-            onClick = { expanded = !expanded},
+            onClick = { expanded = !expanded },
             colors = IconButtonDefaults.iconButtonColors(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer
             )
@@ -226,16 +256,105 @@ fun ProfileDropdownMenu(modifier: Modifier, onChangePassword: () -> Unit, onSign
         }
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false}
+            onDismissRequest = { expanded = false }
         ) {
             DropdownMenuItem(text = { Text("Change Password") }, onClick = {
                 onChangePassword()
                 expanded = false
             })
-            DropdownMenuItem(text = { Text("Sign Out", color = MaterialTheme.colorScheme.error) }, onClick = {
-                onSignOut()
-                expanded = false
-            })
+            DropdownMenuItem(
+                text = { Text("Sign Out", color = MaterialTheme.colorScheme.error) },
+                onClick = {
+                    onSignOut()
+                    expanded = false
+                })
+        }
+    }
+}
+
+@Composable
+fun ChangePasswordDialog(
+    onDismissRequest: () -> Unit,
+    onConfirmation: (String, String) -> Unit,
+) {
+    val oldPass = remember { TextFieldState("") }
+    val newPass = remember { TextFieldState("") }
+    val newPassConfirm = remember { TextFieldState("") }
+    val isMatchingPassword =
+        if (newPassConfirm.text.isNotEmpty()) {
+            newPass.text == newPassConfirm.text
+        } else true
+    var showError by remember { mutableStateOf(false) }
+
+    Dialog(
+        onDismissRequest = onDismissRequest
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(400.dp)
+                .padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    "Change Password",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 30.dp)
+                )
+                OutlinedSecureTextField(
+                    modifier = Modifier
+                        .padding(bottom = 30.dp),
+                    state = oldPass,
+                    label = { Text("Old Password") }
+                )
+                OutlinedSecureTextField(
+                    state = newPass,
+                    label = { Text("New Password") }
+                )
+                OutlinedSecureTextField(
+                    state = newPassConfirm,
+                    label = { Text("Confirm Password") },
+                    isError = showError && !isMatchingPassword,
+                    supportingText = {
+                        if (showError && !isMatchingPassword) {
+                            Text(
+                                text = "Password doesn't match!",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    TextButton(onDismissRequest) {
+                        Text("Cancel", color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(
+                        onClick =
+                            {
+                                if (isMatchingPassword) {
+                                    onConfirmation(
+                                        oldPass.text.toString(),
+                                        newPass.text.toString()
+                                    )
+                                } else {
+                                    showError = true
+                                }
+                            }) {
+                        Text("Submit")
+                    }
+                }
+            }
         }
     }
 }
@@ -244,6 +363,15 @@ fun ProfileDropdownMenu(modifier: Modifier, onChangePassword: () -> Unit, onSign
 @Preview(showSystemUi = false)
 fun SettingsScreenPreview() {
     WeightTrackerTheme {
-        SettingsScreenContent(modifier = Modifier, weightUnit = "lbs", user = null, userProfile = User(email = "hoodzmtb@gmail.com"), onLinkAccount = {}, onChangeWeightUnit = {}, onNavigateToSetGoal = {}, onSignOut = {})
+        SettingsScreenContent(
+            modifier = Modifier,
+            weightUnit = "lbs",
+            user = null,
+            userProfile = User(email = "hoodzmtb@gmail.com"),
+            onLinkAccount = {},
+            onChangeWeightUnit = {},
+            onNavigateToSetGoal = {},
+            onSignOut = {},
+            onChangePassword = { _, _ -> })
     }
 }

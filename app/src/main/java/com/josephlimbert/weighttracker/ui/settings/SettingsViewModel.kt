@@ -28,6 +28,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun changePassword(oldPass: String, newPass: String) {
+        viewModelScope.launch {
+            authRepository.changePassword(oldPass, newPass)
+        }
+    }
+
     fun signOut() {
         authRepository.signOut()
     }
