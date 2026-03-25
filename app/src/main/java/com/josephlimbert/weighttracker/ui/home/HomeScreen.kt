@@ -286,6 +286,18 @@ fun StatsCard(
 @Preview(showSystemUi = true)
 fun HomeScreenPreview() {
     MaterialTheme {
-        HomeScreen(modifier = Modifier, navigateToAuth = {}, navigateToAddWeight = {}, navigateToSetGoal = {})
+        HomeScreenContent(
+            startingWeight = Weight(),
+            currentWeight = Weight(),
+            goalWeight = 175.0,
+            totalLossPercent = 10.0,
+            totalLossWeight = 20.0,
+            targetLoss = 50.0,
+            targetLeft = 30.0,
+            weightUnit = "lbs",
+            modifier = Modifier,
+            onNavigateToAddWeight = { },
+            onNavigateToSetGoal = { }
+        )
     }
 }

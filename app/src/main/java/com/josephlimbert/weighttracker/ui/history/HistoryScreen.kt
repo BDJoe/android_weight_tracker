@@ -239,7 +239,7 @@ private fun HistoryListItem(listItem: ListItem, weightUnit: String?, onEdit: () 
                 }
 
                 Text(text = weightDiff, style = MaterialTheme.typography.bodyLarge,
-                    color = iconTint ?: Color.Unspecified,
+                    color = iconTint,
                     modifier = Modifier.padding(start = 5.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     HistoryItemDropdownMenu(modifier = Modifier.padding(end = 10.dp), onEdit = onEdit, onDelete = { onDelete(listItem.weight.id) })

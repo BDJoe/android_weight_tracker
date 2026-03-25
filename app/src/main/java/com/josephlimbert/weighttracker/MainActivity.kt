@@ -69,7 +69,6 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
-        actionBar?.hide()
         super.onCreate(savedInstanceState)
         setContent {
             val scope = rememberCoroutineScope()
@@ -89,6 +88,14 @@ class MainActivity : ComponentActivity() {
                     NavigationSuiteType.WideNavigationRailCollapsed
                 } else {
                     NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(adaptiveInfo)
+                }
+            }
+
+            val showTopAppBar = with(adaptiveInfo) {
+                if (windowSizeClass.isWidthAtLeastBreakpoint(WIDTH_DP_EXPANDED_LOWER_BOUND)) {
+                    false
+                } else {
+                    true
                 }
             }
 
@@ -113,22 +120,24 @@ class MainActivity : ComponentActivity() {
                 ) {
 
                     Scaffold(
-//                        topBar = {
-//                            CenterAlignedTopAppBar(
-//                                title = {
-//                                    Text(
-//                                        TOP_LEVEL_ROUTES[navigationState.topLevelRoute]?.description
-//                                            ?: "Weight Tracker",
-//                                        maxLines = 1,
-//                                        overflow = TextOverflow.Ellipsis,
-//                                        color = MaterialTheme.colorScheme.onPrimary
-//                                    )
-//                                },
-//                                colors = TopAppBarDefaults.topAppBarColors(
-//                                    containerColor = MaterialTheme.colorScheme.primary,
-//                                ),
-//                            )
-//                        },
+                        topBar = {
+                            if (showTopAppBar) {
+                                CenterAlignedTopAppBar(
+                                    title = {
+                                        Text(
+                                            TOP_LEVEL_ROUTES[navigationState.topLevelRoute]?.description
+                                                ?: "Weight Tracker",
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    },
+                                    colors = TopAppBarDefaults.topAppBarColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                    ),
+                                )
+                            }
+                        },
 //                        bottomBar = {
 //                            NavigationBar {
 //                                TOP_LEVEL_ROUTES.forEach { topLevelRoute ->
