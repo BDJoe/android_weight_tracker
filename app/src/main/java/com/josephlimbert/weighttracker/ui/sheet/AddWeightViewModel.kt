@@ -3,7 +3,6 @@ package com.josephlimbert.weighttracker.ui.sheet
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.josephlimbert.weighttracker.data.model.Weight
-import com.josephlimbert.weighttracker.data.repository.AuthRepository
 import com.josephlimbert.weighttracker.data.repository.FirestoreRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,9 +14,9 @@ import java.security.NoSuchAlgorithmException
 import javax.inject.Inject
 
 @HiltViewModel
-class AddWeightViewModel @Inject constructor(private val firestoreRepository: FirestoreRepository, authRepository: AuthRepository): ViewModel() {
+class AddWeightViewModel @Inject constructor(private val firestoreRepository: FirestoreRepository): ViewModel() {
 
-    val user = authRepository.currentUser
+    val user = firestoreRepository.userProfile
     private val _weight = MutableStateFlow<Weight?>(null)
     val weight: StateFlow<Weight?>
         get() = _weight.asStateFlow()
@@ -33,7 +32,7 @@ class AddWeightViewModel @Inject constructor(private val firestoreRepository: Fi
 
     fun addWeight(userId: String, weight: Weight) {
         viewModelScope.launch {
-            val id = hashId(weight.recordedDate.toString() + userId);
+            val id = hashId(weight.recordedDate.toString() + userId)
             if (weight.id.isBlank()) {
                 firestoreRepository.addWeight(weight.copy(userId = userId, id = id))
             } else {

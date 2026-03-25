@@ -1,26 +1,17 @@
 package com.josephlimbert.weighttracker.data.repository
 
-import androidx.compose.runtime.LaunchedEffect
-import androidx.credentials.exceptions.CreateCredentialUnknownException
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.toObject
-import com.josephlimbert.weighttracker.data.model.ErrorMessage
-import com.josephlimbert.weighttracker.data.model.User
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 sealed class AuthResult<out T> {
     data class Success<T>(val data: T) : AuthResult<T>()
-    data class Error(val error: Exception? = null, val message: String) : AuthResult<Nothing>()
+    data class Error(val message: String) : AuthResult<Nothing>()
     data object Loading : AuthResult<Nothing>()
 }
 
@@ -43,7 +34,7 @@ class AuthRepository @Inject constructor(
                 AuthResult.Success(it)
             } ?: AuthResult.Error(message = "Sign In Failed")
         } catch (e: Exception) {
-            AuthResult.Error(e, e.message ?: "Unknown Error Occurred")
+            AuthResult.Error(e.message ?: "Unknown Error Occurred")
         }
     }
 
@@ -54,7 +45,7 @@ class AuthRepository @Inject constructor(
                 AuthResult.Success(it)
             } ?: AuthResult.Error(message = "Sign In Failed")
         } catch (e: Exception) {
-            AuthResult.Error(e, e.message ?: "Unknown Error Occurred")
+            AuthResult.Error(e.message ?: "Unknown Error Occurred")
         }
     }
 
@@ -65,7 +56,7 @@ class AuthRepository @Inject constructor(
                 AuthResult.Success(it)
             } ?: AuthResult.Error(message = "Register Account Failed")
         } catch (e: Exception) {
-            AuthResult.Error(e, e.message ?: "Unknown Error Occurred")
+            AuthResult.Error(e.message ?: "Unknown Error Occurred")
         }
     }
 
@@ -77,7 +68,20 @@ class AuthRepository @Inject constructor(
                 AuthResult.Success(it)
             } ?: AuthResult.Error(message = "Account Linking Failed")
         } catch (e: Exception) {
-            AuthResult.Error(e, e.message ?: "Unknown Error Occurred")
+            AuthResult.Error(e.message ?: "Unknown Error Occurred")
+        }
+    }
+
+    suspend fun signInEmailAndDeleteGuest(email: String, password: String) : AuthResult<FirebaseUser> {
+        return try {
+            val guest = auth.currentUser
+            val result = auth.signInWithEmailAndPassword(email, password).await()
+            result.user?.let {
+                guest?.delete()
+                AuthResult.Success(it)
+            } ?: AuthResult.Error(message = "Sign In Failed")
+        } catch (e: Exception) {
+            AuthResult.Error(e.message ?: "Unknown Error Occurred")
         }
     }
 
@@ -89,7 +93,7 @@ class AuthRepository @Inject constructor(
             user.updatePassword(newPass).await()
             AuthResult.Success(Unit)
         } catch (e: Exception) {
-            AuthResult.Error(e, e.message ?: "Unknown Error Occurred")
+            AuthResult.Error(e.message ?: "Unknown Error Occurred")
         }
     }
 
@@ -100,7 +104,4 @@ class AuthRepository @Inject constructor(
         auth.signOut()
     }
 
-    suspend fun deleteAccount() {
-        auth.currentUser?.delete()?.await()
-    }
 }

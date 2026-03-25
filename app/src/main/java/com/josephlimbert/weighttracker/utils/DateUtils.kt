@@ -1,11 +1,8 @@
-package com.josephlimbert.weighttracker.data.utils
+package com.josephlimbert.weighttracker.utils
 
-import android.icu.text.DateFormat
 import android.icu.text.SimpleDateFormat
-import android.icu.util.Calendar
 import android.icu.util.TimeZone
 import com.google.firebase.Timestamp
-import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 

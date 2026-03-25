@@ -1,7 +1,6 @@
 package com.josephlimbert.weighttracker.data.model
 
 import com.google.firebase.Timestamp
-import com.google.firebase.firestore.DocumentId
 
 data class Weight(
     val id: String = "",

@@ -23,9 +23,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -41,7 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import com.josephlimbert.weighttracker.R
 import com.josephlimbert.weighttracker.data.model.Weight
-import com.josephlimbert.weighttracker.data.utils.formatDateToMediumPatternString
+import com.josephlimbert.weighttracker.utils.formatDateToMediumPatternString
 import com.josephlimbert.weighttracker.ui.shared.LoadingIndicator
 import kotlinx.serialization.Serializable
 
@@ -146,19 +143,6 @@ fun HomeScreenContent(
                 weightUnit = weightUnit,
             )
         }
-
-//        if (showAddWeightSheet) {
-//            AddWeightSheet(onDismiss = { showAddWeightSheet = false },
-//                onSubmit = { weight ->
-//                    addWeight(userId!!, weight)
-//                    showAddWeightSheet = false
-//                })
-//        }
-
-//        if (showSetGoalSheet) {
-//            SetGoalSheet(onDismiss = { showSetGoalSheet = false }, onSubmit = { weight ->
-//                showSetGoalSheet = false })
-//        }
     }
 }
 
@@ -176,7 +160,7 @@ fun CurrentWeightCard(
             .fillMaxWidth()
             .padding(8.dp),
     ) {
-        Column() {
+        Column {
             Row(
                 modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -193,7 +177,7 @@ fun CurrentWeightCard(
                     Text(startingWeight?.weight.toString() + " " + weightUnit, style = MaterialTheme.typography.titleMedium)
                 }
 
-                Box() {
+                Box {
                     CircularProgressIndicator(
                         modifier = Modifier
                             .padding(vertical = 20.dp)
@@ -301,7 +285,7 @@ fun StatsCard(
 @Composable
 @Preview(showSystemUi = true)
 fun HomeScreenPreview() {
-    MaterialTheme() {
+    MaterialTheme {
         HomeScreen(modifier = Modifier, navigateToAuth = {}, navigateToAddWeight = {}, navigateToSetGoal = {})
     }
 }

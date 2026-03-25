@@ -11,25 +11,38 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val firestoreRepository: FirestoreRepository,
-    private val authRepository: AuthRepository
+    authRepository: AuthRepository
 ): ViewModel() {
-    private val _isLoadingUser = MutableStateFlow(true)
+    private val _goalWeight = MutableStateFlow(0.0)
     val user = authRepository.currentUser
-    val isLoadingUser: StateFlow<Boolean>
-        get() = _isLoadingUser.asStateFlow()
     val currentWeight = firestoreRepository.currentWeight
     val startingWeight = firestoreRepository.startingWeight
-    val goalWeight = firestoreRepository.goalWeight
+    val goalWeight: StateFlow<Double>
+        get() = _goalWeight.asStateFlow()
     val weightUnit = firestoreRepository.weightUnit
+
+    init {
+        viewModelScope.launch {
+            firestoreRepository.userProfile.collect { user ->  _goalWeight.value = user?.goalWeight ?: 0.0}
+        }
+    }
 
     val totalLossPercent: StateFlow<Double> =
         combine(startingWeight, currentWeight, goalWeight) { starting, current, goal ->
-            (((starting.weight - current.weight) / (starting.weight - goal)) * 100.0).coerceIn(0.0, 100.0)
+            if (current.weight < goal) {
+                100.0
+            } else {
+                (((starting.weight - current.weight) / (starting.weight - goal)) * 100.0).coerceIn(
+                    0.0,
+                    100.0
+                )
+            }
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000L),

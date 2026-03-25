@@ -1,10 +1,6 @@
 package com.josephlimbert.weighttracker
 
-import androidx.compose.runtime.key
 import androidx.navigation3.runtime.NavKey
-import com.josephlimbert.weighttracker.data.repository.AuthRepository
-import com.josephlimbert.weighttracker.ui.auth.Auth
-import javax.inject.Inject
 
 /**
  * Handles navigation events (forward and back) by updating the navigation state.

@@ -1,13 +1,11 @@
 package com.josephlimbert.weighttracker.data.repository
 
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.dataObjects
 import com.google.firebase.firestore.snapshots
 import com.google.firebase.firestore.toObject
-import com.josephlimbert.weighttracker.R
 import com.josephlimbert.weighttracker.data.model.User
 import com.josephlimbert.weighttracker.data.model.Weight
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,8 +16,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
-import kotlin.text.get
-import kotlin.text.set
 
 class FirestoreRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
@@ -51,8 +47,7 @@ class FirestoreRepository @Inject constructor(
                     .document(user.uid)
                     .snapshots()
                     .map { document ->
-                        val user = document.toObject<User>()
-                        user?.goalWeight ?: 0.0
+                        document.getDouble("goalWeight") ?: 0.0
                     }
             } else {
                 emptyFlow()

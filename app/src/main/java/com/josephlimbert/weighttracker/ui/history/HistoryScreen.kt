@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -35,7 +36,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -47,9 +47,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import com.josephlimbert.weighttracker.R
 import com.josephlimbert.weighttracker.data.model.Weight
-import com.josephlimbert.weighttracker.data.utils.formatDateToDayOfMonthString
-import com.josephlimbert.weighttracker.data.utils.formatDateToDayOfWeekString
-import com.josephlimbert.weighttracker.data.utils.formatDateToMonthYearString
+import com.josephlimbert.weighttracker.utils.formatDateToDayOfMonthString
+import com.josephlimbert.weighttracker.utils.formatDateToDayOfWeekString
+import com.josephlimbert.weighttracker.utils.formatDateToMonthYearString
 import com.josephlimbert.weighttracker.ui.theme.extendedLight
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
@@ -86,7 +86,7 @@ fun HistoryScreen(
     val goalWeight = viewModel.goalWeight.collectAsStateWithLifecycle(null)
     val user by viewModel.user.collectAsStateWithLifecycle("")
     val weightUnit = viewModel.weightUnit.collectAsStateWithLifecycle(null)
-    var weightsGrouped: Map<String, List<ListItem>> by remember { mutableStateOf(emptyMap()) }
+    val weightsGrouped = remember { mutableStateOf<Map<String, List<ListItem>>>(emptyMap()) }
 
     if (user == null) {
         navigateToAuth()
@@ -94,7 +94,7 @@ fun HistoryScreen(
         HistoryScreenContent(
             modifier = modifier,
             onNavigateToAddWeight = onNavigateToAddWeight,
-            weightsGrouped,
+            weightsGrouped.value,
             weights.value,
             goalWeight.value,
             weightUnit = weightUnit.value,
@@ -112,7 +112,7 @@ fun HistoryScreen(
                 weight = weight,
                 weightDiff = weightDiff)
         }
-        weightsGrouped = weightList.groupBy { formatDateToMonthYearString(it.weight.recordedDate.toDate()) }
+        weightsGrouped.value = weightList.groupBy { formatDateToMonthYearString(it.weight.recordedDate.toDate()) }
     }
 }
 
@@ -130,7 +130,7 @@ private fun HistoryScreenContent(
     var openDeleteDialog by remember {mutableStateOf(false)}
     var selectedWeightId by remember { mutableStateOf("") }
 
-    Scaffold() { innerPadding ->
+    Scaffold { innerPadding ->
         Column(modifier = modifier
             .fillMaxSize()
             .padding(
@@ -147,19 +147,21 @@ private fun HistoryScreenContent(
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     weightsGrouped.forEach { (month, listItems) ->
                         stickyHeader(key = month) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = month,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    modifier = Modifier
-                                        .padding(
-                                            start = 8.dp,
-                                            end = 10.dp,
-                                            top = 8.dp,
-                                            bottom = 8.dp
-                                        )
-                                )
-                                HorizontalDivider()
+                            Surface(modifier = Modifier.fillParentMaxWidth()) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = month,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        modifier = Modifier
+                                            .padding(
+                                                start = 8.dp,
+                                                end = 10.dp,
+                                                top = 8.dp,
+                                                bottom = 8.dp
+                                            )
+                                    )
+                                    HorizontalDivider()
+                                }
                             }
                         }
 
@@ -178,15 +180,6 @@ private fun HistoryScreenContent(
                     }
                 }
             }
-//        if (showBottomSheet) {
-//            AddWeightSheet(
-//                onDismiss = { showBottomSheet = false },
-//                onSubmit = {weight ->
-//                    editWeight(userId, weight)
-//                    showBottomSheet = false },
-//                weight = selectedWeight
-//            )
-//        }
 
             if (openDeleteDialog) {
                 ConfirmDeleteDialog(
@@ -218,12 +211,12 @@ private fun HistoryListItem(listItem: ListItem, weightUnit: String?, onEdit: () 
     val icon = when {
         (listItem.weightDiff > 0) -> ImageVector.vectorResource(R.drawable.up_arrow_icon)
         (listItem.weightDiff < 0) -> ImageVector.vectorResource(R.drawable.down_arrow_icon)
-        else -> ImageVector.vectorResource(R.drawable.equal_icon)
+        else -> null
     }
     val iconTint = when {
         (listItem.weightDiff > 0) -> MaterialTheme.colorScheme.error
         (listItem.weightDiff < 0) ->  extendedLight.success.color
-        else -> MaterialTheme.colorScheme.onSurface
+        else -> Color.Unspecified
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -233,7 +226,7 @@ private fun HistoryListItem(listItem: ListItem, weightUnit: String?, onEdit: () 
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier
                     .width(60.dp)
-                    .background(colorResource(R.color.md_theme_secondaryContainer))
+                    .background(MaterialTheme.colorScheme.secondaryContainer)
                     .padding(vertical = 5.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(text = formattedDayOfWeekText, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.W500)
                     Text(text = formattedDayText, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.W500)
@@ -241,10 +234,12 @@ private fun HistoryListItem(listItem: ListItem, weightUnit: String?, onEdit: () 
 
                 Text(text = formattedWeightText, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 15.dp, end = 30.dp))
 
-                Icon(imageVector = icon, "Weight gain/loss icon", tint = iconTint)
+                if (icon != null) {
+                    Icon(imageVector = icon, "Weight gain/loss icon", tint = iconTint)
+                }
 
                 Text(text = weightDiff, style = MaterialTheme.typography.bodyLarge,
-                    color = iconTint,
+                    color = iconTint ?: Color.Unspecified,
                     modifier = Modifier.padding(start = 5.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     HistoryItemDropdownMenu(modifier = Modifier.padding(end = 10.dp), onEdit = onEdit, onDelete = { onDelete(listItem.weight.id) })

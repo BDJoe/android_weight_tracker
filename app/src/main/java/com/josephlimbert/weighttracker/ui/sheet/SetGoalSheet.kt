@@ -9,10 +9,8 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,23 +29,27 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object SetGoal: NavKey
 @Composable
-fun SetGoalSheet(onDismiss: () -> Unit, goalWeight: Double? = null, viewModel: SetGoalViewModel = hiltViewModel()) {
+fun SetGoalSheet(onDismiss: () -> Unit, viewModel: SetGoalViewModel = hiltViewModel()) {
     val user = viewModel.user.collectAsStateWithLifecycle(null)
     val goalWeight = viewModel.goalWeight.collectAsStateWithLifecycle(null)
 
     if (goalWeight.value == null) {
         LoadingIndicator()
     } else {
-        SetGoalContent(onSubmit = { weight ->
-            viewModel.setGoalWeight(user.value!!.uid, weight.toDouble())
-            onDismiss()
-        }, goalWeight = goalWeight.value)
+        SetGoalContent(
+            onSubmit = { weight ->
+                viewModel.setGoalWeight(user.value!!.id, weight.toDouble())
+                onDismiss()
+                       },
+            goalWeight = goalWeight.value,
+            weightUnit = user.value?.weightUnit ?: "lbs"
+        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SetGoalContent(onSubmit: (weight: String) -> Unit, goalWeight: Double?) {
+fun SetGoalContent(onSubmit: (weight: String) -> Unit, goalWeight: Double?, weightUnit: String) {
     val goalText = if (goalWeight == null || goalWeight <= 0) "" else goalWeight.toString()
     val weightState = rememberTextFieldState(goalText)
 
@@ -59,6 +61,9 @@ fun SetGoalContent(onSubmit: (weight: String) -> Unit, goalWeight: Double?) {
                 .padding(top = 15.dp, start = 15.dp, end = 15.dp, bottom = 10.dp),
             state = weightState,
             label = { Text("Weight") },
+            trailingIcon = {
+                Text(weightUnit)
+            },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
         )
         Button(onClick = { onSubmit(weightState.text.toString()) }, modifier = Modifier.padding(top = 50.dp)) {
